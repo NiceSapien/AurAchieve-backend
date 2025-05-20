@@ -19,7 +19,7 @@ router.get('/profile', authMiddleware, async (req, res) => {
         });
     } catch (error) {
         console.error("Error fetching user profile:", error);
-        res.status(500).json({ message: 'Failed to fetch user profile' });
+        res.status(500).json({ message: 'Failed to fetch user profile', "log": error });
     }
 });
 
