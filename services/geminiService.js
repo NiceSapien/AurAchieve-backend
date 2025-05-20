@@ -16,7 +16,7 @@ async function callGeminiAPI(base64Image, taskDescription, apiKey) {
                     },
                     {
                         inline_data: {
-                            mime_type: "image/jpeg", // Assuming JPEG, adjust if other types are used
+                            mime_type: "image/jpeg",
                             data: base64Image,
                         },
                     },
@@ -36,7 +36,7 @@ async function callGeminiAPI(base64Image, taskDescription, apiKey) {
         return false;
     } catch (error) {
         console.error(`Gemini API call failed with key ${apiKey === GEMINI_PRIMARY_KEY ? 'PRIMARY' : 'FAILSAFE'}:`, error.response ? error.response.data : error.message);
-        throw error; // Re-throw to allow failover
+        throw error;
     }
 }
 
@@ -49,33 +49,75 @@ const verifyTaskWithGemini = async (base64Image, taskDescription) => {
             return await callGeminiAPI(base64Image, taskDescription, GEMINI_FAILSAFE_KEY);
         } catch (failsafeError) {
             console.error('Failsafe Gemini key also failed.');
-            return false; // Both keys failed
+            return false;
         }
     }
 };
 
-const classifyTaskWithGemini = async (taskDescription) => {
-    const apiKey = GEMINI_PRIMARY_KEY;
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+const classifyTaskWithGemini = async (taskDescription, taskCategory) => {
+    const primaryKey = process.env.GEMINI_API_KEY_PRIMARY;
+    const failsafeKey = process.env.GEMINI_API_KEY_FAILSAFE;
 
-    const prompt = `Classify the following task as "good" or "bad" (type), and as "easy", "medium", or "hard" (intensity). Reply in JSON: {"type":"good|bad","intensity":"easy|medium|hard"}. Task: ${taskDescription}`;
-    const body = { contents: [{ parts: [{ text: prompt }] }] };
+    let prompt;
+    if (taskCategory === 'timed') {
+        prompt = `Classify the following timed task as "good" or "bad" (type), and as "easy", "medium", or "hard" (intensity). This task is about sustained effort over time. Reply ONLY with a valid JSON object like this: {"type":"good|bad","intensity":"easy|medium|hard"}. Task: ${taskDescription}`;
+    } else { // 'normal' task
+        prompt = `Classify the following task as "good" or "bad" (type), and as "easy", "medium", or "hard" (intensity). Also, determine if this task's completion is reasonably verifiable with a single photograph (isImageVerifiable: true/false). Reply ONLY with a valid JSON object like this: {"type":"good|bad","intensity":"easy|medium|hard","isImageVerifiable":true|false}. Task: ${taskDescription}`;
+    }
+
+    const attemptClassification = async (apiKey, keyType) => {
+        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+        const body = { contents: [{ parts: [{ text: prompt }] }] };
+
+        try {
+            const response = await axios.post(endpoint, body, { headers: { "Content-Type": "application/json" } });
+            if (response.data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+                const textResponse = response.data.candidates[0].content.parts[0].text;
+                try {
+                    const cleanedResponse = textResponse.replace(/^```json\s*|\s*```$/g, '');
+                    const classification = JSON.parse(cleanedResponse);
+
+                    // Validate common fields
+                    if (!classification.type || !classification.intensity ||
+                        !['good', 'bad'].includes(classification.type) ||
+                        !['easy', 'medium', 'hard'].includes(classification.intensity)) {
+                        console.error("Gemini classification JSON invalid structure or values:", cleanedResponse);
+                        return null;
+                    }
+                    // Validate specific fields for 'normal' tasks
+                    if (taskCategory === 'normal' && typeof classification.isImageVerifiable !== 'boolean') {
+                        console.error("Gemini classification missing or invalid 'isImageVerifiable' for normal task:", cleanedResponse);
+                        return null;
+                    }
+                    if (taskCategory === 'timed') {
+                        classification.isImageVerifiable = false;
+                    }
+
+                    return classification;
+                } catch (e) {
+                    console.error("Error parsing Gemini classification JSON:", textResponse, e);
+                }
+            }
+            return null;
+        } catch (error) {
+            console.error(`Gemini task classification failed with ${keyType} key:`, error.response ? error.response.data : error.message);
+            if (error.response && (error.response.status === 429 || error.response.status === 400)) {
+                 throw error;
+            }
+            throw error;
+        }
+    };
 
     try {
-        const response = await axios.post(endpoint, body, { headers: { "Content-Type": "application/json" } });
-        if (response.data?.candidates?.[0]?.content?.parts?.[0]?.text) {
-            const textResponse = response.data.candidates[0].content.parts[0].text;
-            try {
-                const classification = JSON.parse(textResponse);
-                if (classification.type && classification.intensity) {
-                    return classification;
-                }
-            } catch (e) { console.error("Error parsing Gemini classification JSON:", e); }
+        return await attemptClassification(primaryKey, 'PRIMARY');
+    } catch (primaryError) {
+        console.warn('Primary Gemini key for classification failed, trying failsafe key...');
+        try {
+            return await attemptClassification(failsafeKey, 'FAILSAFE');
+        } catch (failsafeError) {
+            console.error('Failsafe Gemini key for classification also failed.');
+            return null;
         }
-        return null;
-    } catch (error) {
-        console.error('Gemini task classification failed:', error.response ? error.response.data : error.message);
-        return null;
     }
 };
 
