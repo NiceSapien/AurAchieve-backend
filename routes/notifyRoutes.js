@@ -1,13 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/authMiddleware'); 
-const appwriteService = require('../services/appwriteService');
+const admin = require('firebase-admin');
 
 router.post('/', authMiddleware, async (req, res) => {
-  const { fcmToken, userId, loss } = req.body;
+  const { fcmToken, userId } = req.body;
 
-  if (!fcmToken || !userId || loss === undefined) {
-    return res.status(400).json({ error: 'Missing fcmToken, userId, or loss in request body' });
+  if (!fcmToken || !userId) {
+    return res.status(400).json({ error: 'Missing fcmToken, or userId in request body' });
   }
 
   const message = {
