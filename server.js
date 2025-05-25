@@ -4,11 +4,19 @@ const express = require('express');
 const dotenv = require('dotenv');
 const taskRoutes = require('./routes/taskRoutes');
 const userRoutes = require('./routes/userRoutes');
+const notifyRoutes = require('./routes/notifyRoutes');
+const admin = require('firebase-admin');
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+const serviceAccount = require(process.env.SERVICEACCOUNT);
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+});
 
 // Middleware
 app.use(express.json({ limit: '10mb' }));
@@ -29,6 +37,8 @@ app.use((err, req, res, next) => {
     console.error(err.stack);
     res.status(500).send('Something broke!');
 });
+
+app.use('/api/send-push-notification', notifyRoutes);
 
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);

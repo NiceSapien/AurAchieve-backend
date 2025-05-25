@@ -12,6 +12,8 @@ Get it now through [GitHub actions](https://github.com/NiceSapien/AuraAscend/act
 
 ## Self-hosting
 
+You'll need NodeJS v20. You may be able to use newer versions but this backend was built and tested on `v20.19.0`. There are no "minimum" requirements for the backend, but it should be fine on 512MB RAM.
+
 1. Clone the repository locally
 2. Install all the packages and dependencies:
 
@@ -24,22 +26,26 @@ npm install
 ![Attributes](assets/tasks.png)
 
 Add the following in `profiles` and you'll be done:
-![Attributes - profiles](image.png)
+![Attributes - profiles](assets/profiles.png)
 
 4. Generate a API key with database and auth permissions from appwrite and copy it.
 
-5. Edit `.env.example` according to the details inside it. Rename it to `.env` afterwards.
 
-6. Run.
+5. Download your AuraAscend Firebase project's admin sdk and drop it in a folder named(create new) `privateConfig/`
+
+6. Edit `.env.example` according to the details inside it. Rename it to `.env` afterwards.
+
+
+7. Run.
 
 ```bash
 node server.js
 ```
 
 ## Contributing
-Please ensure your contributions are compatible with the latest version of the app, but backwards compatibility is appreciated aswell.
+Please ensure your contributions are compatible with the latest version of the app, but backwards compatibility is appreciated aswell. Follow the [Self-Hosting](#self-hosting) guide to get started!
 
-There's not much about contributing yet. Here's how you may make commits:
+There's not much about how to contribute yet. Here's how you may make commits:
 
 `feat`: For new features
 
@@ -58,6 +64,6 @@ There's not much about contributing yet. Here's how you may make commits:
 `security`: Anything related to the security and safety of the backend. These changes should be compatible with the latest version of the app.
 
 ## Sponsor AuraAscend
-If you appreciate AuraAscend, please [sponsor](https://github.com/sponsors/NiceSapien) to keep AuraAscend free forever. This repository could be locked under a sponsorship paywall. However, it is being provided free for everyone, forever. AuraAscend is even licensed under the most open MIT license.
+If you appreciate AuraAscend, please [sponsor](https://github.com/sponsors/NiceSapien) to keep AuraAscend free forever. You can also do this through [patreon](https://patreon.com/nicesapien), but GitHub sponsors is preferred over Patreon as it charges less. This repository could be locked under a sponsorship paywall. However, it is being provided free for everyone, forever. AuraAscend is even licensed under the most open MIT license.
 
-More about sponsorships [here](https://github.com/nicesapien/auraascend?tab=readme-ov-file#sponsors)
+More about sponsorships [here](https://github.com/nicesapien/auraascend?tab=readme-ov-file#sponsors).
