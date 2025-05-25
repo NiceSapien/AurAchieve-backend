@@ -30,15 +30,13 @@ app.get('/', (req, res) => {
 // API Routes
 app.use('/api/tasks', taskRoutes);
 app.use('/api/user', userRoutes);
-
+app.use('/api/send-push-notification', notifyRoutes);
 
 // Global error handler
 app.use((err, req, res, next) => {
     console.error(err.stack);
     res.status(500).send('Something broke!');
 });
-
-app.use('/api/send-push-notification', notifyRoutes);
 
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);

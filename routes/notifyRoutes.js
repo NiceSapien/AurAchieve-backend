@@ -3,7 +3,7 @@ const router = express.Router();
 const authMiddleware = require('../middleware/authMiddleware'); 
 const appwriteService = require('../services/appwriteService');
 
-router.post('/api/send-push-notification', authMiddleware, async (req, res) => {
+router.post('/', authMiddleware, async (req, res) => {
   const { fcmToken, userId, loss } = req.body;
 
   if (!fcmToken || !userId || loss === undefined) {
