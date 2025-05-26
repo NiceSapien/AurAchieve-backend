@@ -2,18 +2,19 @@ const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/authMiddleware');
 const admin = require('firebase-admin');
+const appwriteService = require('../services/appwriteService'); 
 
 router.post('/', authMiddleware, async (req, res) => {
   const { fcmToken, userId } = req.body;
-
+  let userProfile = await appwriteService.getOrCreateUserProfile(userId, req.user.name, req.user.email);
   if (!fcmToken || !userId) {
     return res.status(400).json({ error: 'Missing fcmToken, or userId in request body' });
   }
-  const randomNumber = Math.floor(Math.random() * 2);
+  const randomNumber = Math.floor(Math.random() * 3);
   const message = [{
     notification: {
       title: 'What are you doing?',
-      body: `God built the entire universe, so that you can watch social media?`
+      body: `The entire universe exists so you can watch social media? Aura lost.`
     },
     token: fcmToken
   }, {
@@ -28,11 +29,17 @@ router.post('/', authMiddleware, async (req, res) => {
       body: `You've lost aura for using social media.`
     },
     token: fcmToken
+  }, {
+    notification: {
+      title: 'Get a life.',
+      body: `You've lost aura for using social media.`
+    },
+    token: fcmToken
   },
-
-];
+  ];
 
   try {
+    await appwriteService.updateUserAura(userId, Math.max(0, userProfile.aura - 10));
     console.log(`Attempting to send push notification to token: ${fcmToken}`);
     const response = await admin.messaging().send(message[randomNumber]); // Use send() for single device
     console.log('Successfully sent message:', response);
