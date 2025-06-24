@@ -14,16 +14,16 @@ async function updateUserValidationStats(userId, count, date) {
 async function getUserTasks(userId) {
     return databases.listDocuments(dbId, tasksCollectionId, [
         Query.equal('userId', userId),
-        Query.orderDesc('createdAt') 
+        Query.orderDesc('createdAt')
     ]);
 }
 
 const createTask = async (userId, taskData) => {
     try {
-        console.log(`Attempting to create document in DB: ${process.env.APPWRITE_DATABASE_ID}, Collection: ${process.env.APPWRITE_TASKS_COLLECTION_ID}`); 
-        console.log("Data being sent to Appwrite:", { 
+        console.log(`Attempting to create document in DB: ${process.env.APPWRITE_DATABASE_ID}, Collection: ${process.env.APPWRITE_TASKS_COLLECTION_ID}`);
+        console.log("Data being sent to Appwrite:", {
             userId: userId,
-            name: taskData.name, 
+            name: taskData.name,
             intensity: taskData.intensity,
             type: taskData.type,
             taskCategory: taskData.taskCategory,
@@ -39,7 +39,7 @@ const createTask = async (userId, taskData) => {
             ID.unique(),
             {
                 userId: userId,
-                name: taskData.name, 
+                name: taskData.name,
                 intensity: taskData.intensity,
                 type: taskData.type,
                 taskCategory: taskData.taskCategory,
@@ -52,7 +52,7 @@ const createTask = async (userId, taskData) => {
         );
         return document;
     } catch (error) {
-        console.error('Appwrite createTask error:', error); 
+        console.error('Appwrite createTask error:', error);
         console.error('Appwrite createTask error code:', error.code);
         console.error('Appwrite createTask error type:', error.type);
         console.error('Appwrite createTask error response:', error.response);
@@ -69,14 +69,14 @@ const getOrCreateUserProfile = async (userId, name, email) => {
         );
         return profile;
     } catch (error) {
-        if (error.code === 404) { 
+        if (error.code === 404) {
             try {
                 const newProfile = await databases.createDocument(
                     dbId,
                     profilesCollectionId,
-                    userId, 
+                    userId,
                     {
-                        userId: userId, 
+                        userId: userId,
                         name: name,
                         email: email,
                         aura: 50,
@@ -95,6 +95,67 @@ const getOrCreateUserProfile = async (userId, name, email) => {
         throw error;
     }
 };
+
+const getOrSetupSocialBlocker = async (userId, socialPassword, socialEnd) => {
+    try {
+        const profile = await databases.getDocument(
+            dbId,
+            profilesCollectionId,
+            userId
+        );
+        // Check if socialEnd exists
+        if (profile['socialEnd'] == null || profile['socialEnd'] == "") {
+            throw new Error("Not found");
+        } else {
+            return profile;
+        }
+    } catch (error) {
+        try {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+
+            const formattedDate = `${year}-${month}-${day}`;
+            console.log(formattedDate);
+            function addDaysToDate(dateString, days) {
+                const date = new Date(dateString);
+                date.setDate(date.getDate() + days);
+                return date.toISOString().split('T')[0]; // Format as YYYY-MM-DD
+            }
+            const newBlocker = await databases.updateDocument(
+                dbId,
+                profilesCollectionId,
+                userId,
+                {
+                    socialPassword: socialPassword,
+                    socialDays: socialEnd,
+                    socialEnd: addDaysToDate(formattedDate, socialEnd),
+                    socialStart: formattedDate,
+                }
+            );
+            console.log("boom")
+            return newBlocker;
+        } catch (creationError) {
+            console.error('Appwrite create new user social blocker error:', creationError);
+            throw creationError;
+        }
+    }
+}
+const resetSocialBlocker = async (userId) => {
+                const newBlocker = await databases.updateDocument(
+                dbId,
+                profilesCollectionId,
+                userId,
+                {
+                    socialPassword: null,
+                    socialDays: null,
+                    socialEnd: null,
+                    socialStart: null,
+                }
+            );
+            return newBlocker;
+}
 
 async function updateTaskStatus(taskId, status, completedAt = null) {
     const dataToUpdate = { status };
@@ -129,5 +190,7 @@ module.exports = {
     updateTaskStatus,
     updateTaskType,
     deleteTask,
-    getTaskById
+    getTaskById,
+    getOrSetupSocialBlocker,
+    resetSocialBlocker
 };

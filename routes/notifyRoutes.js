@@ -36,7 +36,7 @@ router.post('/', authMiddleware, async (req, res) => {
     },
     token: fcmToken
   },
-  ];
+  ]; 
 
   try {
     await appwriteService.updateUserAura(userId, Math.max(0, userProfile.aura - 10));
