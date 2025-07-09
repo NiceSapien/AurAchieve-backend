@@ -6,6 +6,7 @@ const taskRoutes = require('./routes/taskRoutes');
 const userRoutes = require('./routes/userRoutes');
 const notifyRoutes = require('./routes/notifyRoutes');
 const socialblockRoutes = require('./routes/socialblockRoutes');
+const timetableRoutes = require('./routes/timetableRoutes');
 const admin = require('firebase-admin');
 
 dotenv.config();
@@ -33,6 +34,7 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/send-push-notification', notifyRoutes);
 app.use('/api/social-blocker', socialblockRoutes);
+app.use('/api/timetable', timetableRoutes);
 
 // Global error handler
 app.use((err, req, res, next) => {

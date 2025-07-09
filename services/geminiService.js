@@ -121,5 +121,38 @@ const classifyTaskWithGemini = async (taskDescription, taskCategory) => {
     }
 };
 
+async function requestTimetableGen(timetable, apiKey) {
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+    console.log(timetable)
+    const damas = `Do not respond with anything other than the requested kind of json. Don't add subjects not in the json below. Generate a timetable with the json given below. Basically, you have to alot one day for each chapter until the deadline. Make sure to add revision and break days if there's enough time. Mix different subjects each day so the user doesn't get bored studying the same subject for several days.  A example of break day's json: {"date": "2025-07-06", "tasks": [{"type": "break", "content": {}}]} and a study day's json: {"date": "2025-07-08", "tasks": [{"type": "study", "content": {"subject": "SUBJECT NAME", "chapterNumber": "2"}}]} and for the revision days, just replace type with "revision". Also, feel free to put revision of multiple chapters on the same day if there's not enough time. Make sure to pay attention to start date and deadline. Deadline means last date so there's no need to generate json before startDate and after deadline. They're both in YYYY-MM-DD format. Here's the list of chapters, make the timetable according to this: ` + JSON.stringify(timetable);
+    const body = {
+        contents: [
+            {
+                parts: [
+                    {
+                        text: damas,
+                    },
+                ],
+            },
+        ],
+    };
 
-module.exports = { verifyTaskWithGemini, classifyTaskWithGemini };
+    try {
+        const response = await axios.post(endpoint, body, {
+            headers: { "Content-Type": "application/json" },
+        });
+        if (response.data && response.data.candidates && response.data.candidates.length > 0) {
+            const text = response.data
+            console.log(text.candidates)
+            console.log(text.candidates[0].content.parts[0].text);
+            return text.candidates[0].content.parts[0].text.replaceAll('```json', '').replaceAll('```', '');
+        }
+        return false;
+    } catch (error) {
+        console.error(`Gemini API call failed with key ${apiKey === GEMINI_PRIMARY_KEY ? 'PRIMARY' : 'FAILSAFE'}:`, error.response ? error.response.data : error.message);
+        throw error;
+    }
+}
+
+
+module.exports = { verifyTaskWithGemini, classifyTaskWithGemini, requestTimetableGen };

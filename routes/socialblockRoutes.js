@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/authMiddleware');
-const admin = require('firebase-admin');
 const appwriteService = require('../services/appwriteService');
 
 
