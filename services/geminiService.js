@@ -60,11 +60,11 @@ const classifyTaskWithGemini = async (taskDescription, taskCategory) => {
 
     let prompt;
     if (taskCategory === 'timed') {
-        prompt = `Classify the following timed task as "good" or "bad" (type), and as "easy", "medium", or "hard" (intensity). This task is about sustained effort over time. Reply ONLY with a valid JSON object like this: {"type":"good|bad","intensity":"easy|medium|hard"}. Task: ${taskDescription}`;
-    } else { // 'normal' task
+        prompt = `Classify the following timed task as "easy", "medium", or "hard" (intensity). This task is about sustained effort over time. Reply ONLY with a valid JSON object like this(don't change the type, keep it "good"): {"type":"good","intensity":"easy|medium|hard"}. Task: ${taskDescription}`;
+    } else {
         prompt = `Classify the following task as "good" or "bad" (type), and as "easy", "medium", or "hard" (intensity). Also, determine if this task's completion is reasonably verifiable with a single photograph (isImageVerifiable: true/false). Reply ONLY with a valid JSON object like this: {"type":"good|bad","intensity":"easy|medium|hard","isImageVerifiable":true|false}. Task: ${taskDescription}`;
     }
-
+    
     const attemptClassification = async (apiKey, keyType) => {
         const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
         const body = { contents: [{ parts: [{ text: prompt }] }] };
@@ -77,14 +77,12 @@ const classifyTaskWithGemini = async (taskDescription, taskCategory) => {
                     const cleanedResponse = textResponse.replace(/^```json\s*|\s*```$/g, '');
                     const classification = JSON.parse(cleanedResponse);
 
-                    // Validate common fields
                     if (!classification.type || !classification.intensity ||
                         !['good', 'bad'].includes(classification.type) ||
                         !['easy', 'medium', 'hard'].includes(classification.intensity)) {
                         console.error("Gemini classification JSON invalid structure or values:", cleanedResponse);
                         return null;
                     }
-                    // Validate specific fields for 'normal' tasks
                     if (taskCategory === 'normal' && typeof classification.isImageVerifiable !== 'boolean') {
                         console.error("Gemini classification missing or invalid 'isImageVerifiable' for normal task:", cleanedResponse);
                         return null;
@@ -121,38 +119,41 @@ const classifyTaskWithGemini = async (taskDescription, taskCategory) => {
     }
 };
 
-async function requestTimetableGen(timetable, apiKey) {
+async function makeGeminiRequest(prompt, apiKey) {
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-    console.log(timetable)
-    const damas = `Do not respond with anything other than the requested kind of json. Don't add subjects not in the json below. Generate a timetable with the json given below. Basically, you have to alot one day for each chapter until the deadline. Make sure to add revision and break days if there's enough time. Mix different subjects each day so the user doesn't get bored studying the same subject for several days.  A example of break day's json: {"date": "2025-07-06", "tasks": [{"type": "break", "content": {}}]} and a study day's json: {"date": "2025-07-08", "tasks": [{"type": "study", "content": {"subject": "SUBJECT NAME", "chapterNumber": "2"}}]} and for the revision days, just replace type with "revision". Also, feel free to put revision of multiple chapters on the same day if there's not enough time. Make sure to pay attention to start date and deadline. Deadline means last date so there's no need to generate json before startDate and after deadline. They're both in YYYY-MM-DD format. Here's the list of chapters, make the timetable according to this: ` + JSON.stringify(timetable);
-    const body = {
-        contents: [
-            {
-                parts: [
-                    {
-                        text: damas,
-                    },
-                ],
-            },
-        ],
-    };
+    const body = { contents: [{ parts: [{ text: prompt }] }] };
 
-    try {
-        const response = await axios.post(endpoint, body, {
-            headers: { "Content-Type": "application/json" },
-        });
-        if (response.data && response.data.candidates && response.data.candidates.length > 0) {
-            const text = response.data
-            console.log(text.candidates)
-            console.log(text.candidates[0].content.parts[0].text);
-            return text.candidates[0].content.parts[0].text.replaceAll('```json', '').replaceAll('```', '');
+    const response = await axios.post(endpoint, body, {
+        headers: { "Content-Type": "application/json" },
+    });
+
+    if (response.data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+        const textResponse = response.data.candidates[0].content.parts[0].text;
+        const cleanedResponse = textResponse.replace(/^```json\s*|\s*```$/g, '');
+        try {
+            return JSON.parse(cleanedResponse);
+        } catch (e) {
+            console.error("Error parsing Gemini JSON response:", cleanedResponse, e);
+            throw new Error("Invalid JSON response from AI service.");
         }
-        return false;
-    } catch (error) {
-        console.error(`Gemini API call failed with key ${apiKey === GEMINI_PRIMARY_KEY ? 'PRIMARY' : 'FAILSAFE'}:`, error.response ? error.response.data : error.message);
-        throw error;
     }
+    throw new Error("Empty or invalid response from AI service.");
 }
 
+async function requestTimetableGen(timetablePayload) {
+    const prompt = `Do not respond with anything other than the requested kind of json. Don't add subjects not in the json below. Generate a timetable with the json given below. Basically, you have to alot one day for each chapter until the deadline. Make sure to add revision and break days if there's enough time. Mix different subjects each day so the user doesn't get bored studying the same subject for several days. A break day's json is: {"date": "2025-07-06", "tasks": [{"type": "break", "content": {}}]}. A study day's json is: {"date": "2025-07-08", "tasks": [{"type": "study", "content": {"subject": "SUBJECT NAME", "chapterNumber": "2", "chapterName": "OPTIONAL CHAPTER NAME"}}]}. For revision days, use "revision" as the type and the rest remains same. You can put multiple revision tasks on the same day. Pay attention to the start date and deadline (YYYY-MM-DD format). The deadline is the last day for tasks. Here's the list of chapters, make the timetable according to this: ${JSON.stringify(timetablePayload)}`;
+
+    try {
+        return await makeGeminiRequest(prompt, GEMINI_PRIMARY_KEY);
+    } catch (primaryError) {
+        console.warn('Primary Gemini key for timetable generation failed, trying failsafe key...');
+        try {
+            return await makeGeminiRequest(prompt, GEMINI_FAILSAFE_KEY);
+        } catch (failsafeError) {
+            console.error('Failsafe Gemini key for timetable generation also failed.');
+            throw new Error("Failed to generate timetable with both primary and failsafe keys.");
+        }
+    }
+}
 
 module.exports = { verifyTaskWithGemini, classifyTaskWithGemini, requestTimetableGen };

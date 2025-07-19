@@ -1,4 +1,4 @@
-const { databases, dbId, profilesCollectionId, tasksCollectionId, ID, Query } = require('../config/appwriteClient');
+const { databases, dbId, profilesCollectionId, tasksCollectionId, studyPlansCollectionId, ID, Query } = require('../config/appwriteClient');
 
 async function updateUserAura(userId, newAura) {
     return databases.updateDocument(dbId, profilesCollectionId, userId, { aura: newAura });
@@ -96,6 +96,69 @@ const getOrCreateUserProfile = async (userId, name, email) => {
     }
 };
 
+const createStudyPlan = async (userId, planData) => {
+    try {
+        const document = await databases.createDocument(
+            dbId,
+            studyPlansCollectionId,
+            userId, 
+            {
+                ...planData,
+                userId: userId,
+            }
+        );
+        return document;
+    } catch (error) {
+        console.error('Appwrite createStudyPlan error:', error);
+        throw error;
+    }
+};
+
+const getStudyPlan = async (userId) => {
+    try {
+        const plan = await databases.getDocument(
+            dbId,
+            studyPlansCollectionId,
+            userId
+        );
+        return plan;
+    } catch (error) {
+        if (error.code === 404) {
+            return null;
+        }
+        console.error('Appwrite getStudyPlan error:', error);
+        throw error;
+    }
+};
+
+const updateStudyPlan = async (planId, data) => {
+    try {
+        const updatedPlan = await databases.updateDocument(
+            dbId,
+            studyPlansCollectionId,
+            planId,
+            data
+        );
+        return updatedPlan;
+    } catch (error) {
+        console.error('Appwrite updateStudyPlan error:', error);
+        throw error;
+    }
+};
+
+const deleteStudyPlan = async (planId) => {
+    try {
+        await databases.deleteDocument(
+            dbId,
+            studyPlansCollectionId,
+            planId
+        );
+    } catch (error) {
+        console.error('Appwrite deleteStudyPlan error:', error);
+        throw error;
+    }
+};
+
 const getOrSetupSocialBlocker = async (userId, socialPassword, socialEnd) => {
     try {
         const profile = await databases.getDocument(
@@ -103,7 +166,7 @@ const getOrSetupSocialBlocker = async (userId, socialPassword, socialEnd) => {
             profilesCollectionId,
             userId
         );
-        // Check if socialEnd exists
+
         if (profile['socialEnd'] == null || profile['socialEnd'] == "") {
             throw new Error("Not found");
         } else {
@@ -121,7 +184,7 @@ const getOrSetupSocialBlocker = async (userId, socialPassword, socialEnd) => {
             function addDaysToDate(dateString, days) {
                 const date = new Date(dateString);
                 date.setDate(date.getDate() + days);
-                return date.toISOString().split('T')[0]; // Format as YYYY-MM-DD
+                return date.toISOString().split('T')[0]; 
             }
             const newBlocker = await databases.updateDocument(
                 dbId,
@@ -182,15 +245,19 @@ async function getTaskById(taskId) {
 }
 
 module.exports = {
-    getOrCreateUserProfile,
     updateUserAura,
     updateUserValidationStats,
     getUserTasks,
     createTask,
+    getOrCreateUserProfile,
+    getOrSetupSocialBlocker,
+    resetSocialBlocker,
+    createStudyPlan,
+    getStudyPlan,
+    updateStudyPlan,
+    deleteStudyPlan,
     updateTaskStatus,
     updateTaskType,
     deleteTask,
     getTaskById,
-    getOrSetupSocialBlocker,
-    resetSocialBlocker
 };

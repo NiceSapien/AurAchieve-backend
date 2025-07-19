@@ -3,16 +3,17 @@
 const express = require('express');
 const dotenv = require('dotenv');
 const taskRoutes = require('./routes/taskRoutes');
-const userRoutes = require('./routes/userRoutes');
-const notifyRoutes = require('./routes/notifyRoutes');
-const socialblockRoutes = require('./routes/socialblockRoutes');
+const socialBlockerRoutes = require('./routes/socialblockRoutes');
+const notificationRoutes = require('./routes/notifyRoutes');
 const timetableRoutes = require('./routes/timetableRoutes');
+const studyPlanRoutes = require('./routes/studyPlanRoutes');
+const userRoutes = require('./routes/userRoutes');
 const admin = require('firebase-admin');
 
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 4000;
 
 const serviceAccount = require(process.env.SERVICEACCOUNT);
 
@@ -30,11 +31,12 @@ app.get('/', (req, res) => {
 });
 
 // API Routes
+app.use('/api/user', userRoutes)
 app.use('/api/tasks', taskRoutes);
-app.use('/api/user', userRoutes);
-app.use('/api/send-push-notification', notifyRoutes);
-app.use('/api/social-blocker', socialblockRoutes);
+app.use('/api/social-blocker', socialBlockerRoutes);
+app.use('/api/notifications', notificationRoutes);
 app.use('/api/timetable', timetableRoutes);
+app.use('/api/study-plan', studyPlanRoutes);
 
 // Global error handler
 app.use((err, req, res, next) => {

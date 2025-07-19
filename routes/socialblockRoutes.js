@@ -3,8 +3,6 @@ const router = express.Router();
 const authMiddleware = require('../middleware/authMiddleware');
 const appwriteService = require('../services/appwriteService');
 
-
-
 router.post('/', authMiddleware, async (req, res) => {
     try {
         const userId = req.user.$id;
@@ -12,7 +10,6 @@ router.post('/', authMiddleware, async (req, res) => {
         if (!socialPassword || !socialEnd) {
             return res.status(400).json({ error: 'Missing ending or password in request body' });
         }
-
 
         try {
             const profile = await appwriteService.getOrSetupSocialBlocker(userId, socialPassword, socialEnd);
@@ -45,20 +42,25 @@ router.get('/get', authMiddleware, async (req, res) => {
         res.status(404).json({ message: 'Failed to fetch social blocker', "log": error });
     }
 });
-router.put('/end', authMiddleware, async (req, res) => {
+router.post('/end', authMiddleware, async (req, res) => {
     function subtractDaysFromDate(dateString, days) {
         const date = new Date(dateString);
         date.setDate(date.getDate() - days);
-        return date.toISOString().split('T')[0]; // Format as YYYY-MM-DD
+        return date.toISOString().split('T')[0]; 
     }
+    console.log("pro");
     const userId = req.user.$id;
+    const { hasEnded } = req.body;
+    console.log(hasEnded)
     try {
         const profile = await appwriteService.getOrSetupSocialBlocker(userId);
-        if (req.hasEnded == true) {
-            let userProfile = await appwriteService.getOrCreateUserProfile(userId, userName, userEmail);
+        if (hasEnded === true) {
+
             const date = new Date(profile.socialEnd);
-            const day = date.getDate();
+            const day = new Date().toISOString().split('T')[0];
             const auraChange = subtractDaysFromDate(profile.socialEnd, profile.socialDays);
+            console.log(profile.socialEnd)
+            console.log(`day be like ${day} and date be like ${date}`)
             if (auraChange == profile.socialStart && day >= profile.socialEnd) {
                 await appwriteService.updateUserAura(userId, profile.socialDays * 15);
                 res.json({
@@ -66,8 +68,8 @@ router.put('/end', authMiddleware, async (req, res) => {
                     socialEnd: profile.socialEnd,
                     socialStart: profile.socialStart,
                 });
-                const profile = await appwriteService.resetSocialBlocker(userId);
-                console.log(profile)
+                const resetProfile = await appwriteService.resetSocialBlocker(userId);
+                console.log(resetProfile)
             } else {
                 res.status(500).json({ message: 'Failed to update Aura as days not completed yet.' });
             }

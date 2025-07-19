@@ -1,19 +1,35 @@
 const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/authMiddleware');
-const appwriteService = require('../services/appwriteService');
 const { requestTimetableGen } = require('../services/geminiService'); 
 require('dotenv').config();
-const GEMINI_PRIMARY_KEY = process.env.GEMINI_API_KEY_PRIMARY;
 
 router.post('/', authMiddleware, async (req, res) => {
-     //   const userId = req.user.$id;
-        const { timetable } = req.body;
-        if (!timetable) {
-            return res.status(400).json({ error: 'Missing timetable in request body' });
+    try {
+        const { chapters, deadline, clientDate } = req.body;
+        if (!chapters || !deadline || !clientDate) {
+            return res.status(400).json({ error: 'Missing required fields for timetable generation.' });
         }
-        let timetablo = await requestTimetableGen(timetable, GEMINI_PRIMARY_KEY);
-        res.send(timetablo);
-})
+
+        const allChaptersWithSubjects = Object.entries(chapters).flatMap(([subject, chapterList]) => 
+            chapterList.map(chapter => ({
+                ...chapter,
+                subject: subject
+            }))
+        );
+
+        const timetablePayload = {
+            chapters: allChaptersWithSubjects,
+            deadline: deadline,
+            startDate: clientDate,
+        };
+
+        const generatedPlan = await requestTimetableGen(timetablePayload);
+        res.json(generatedPlan);
+    } catch (error) {
+        console.error('Error in timetable generation route:', error);
+        res.status(500).json({ error: 'Failed to generate timetable preview.' });
+    }
+});
 
 module.exports = router;
