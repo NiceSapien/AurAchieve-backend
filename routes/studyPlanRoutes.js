@@ -164,6 +164,7 @@ router.post('/tasks/:taskId/complete', authMiddleware, async (req, res) => {
             subjects: JSON.parse(updatedPlan.subjects),
             chapters: JSON.parse(updatedPlan.chapters),
             timetable: JSON.parse(updatedPlan.timetable),
+            auraChange: auraToAdd,
         };
 
         res.json(responsePlan);

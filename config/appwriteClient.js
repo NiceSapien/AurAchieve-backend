@@ -20,4 +20,5 @@ module.exports = {
     dbId: process.env.APPWRITE_DATABASE_ID,
     profilesCollectionId: process.env.PROFILES_COLLECTION_ID,
     tasksCollectionId: process.env.TASKS_COLLECTION_ID,
+    studyPlansCollectionId: process.env.STUDY_PLAN_COLLECTION_ID,
 };
