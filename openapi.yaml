@@ -1,0 +1,406 @@
+openapi: 3.0.3
+info:
+  title: AurAchieve Backend API
+  description: API for AurAchieve self-improvement app backend
+  version: 1.0.0
+servers:
+  - url: https://auraascend-fgf4aqf5gubgacb3.centralindia-01.azurewebsites.net
+paths:
+  /api/user/profile:
+    get:
+      summary: Get user profile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  userId:
+                    type: string
+                  name:
+                    type: string
+                  email:
+                    type: string
+                  aura:
+                    type: integer
+                  validationCount:
+                    type: integer
+                  lastValidationResetDate:
+                    type: string
+        '500':
+          description: Error fetching user profile
+  /api/tasks:
+    get:
+      summary: Get all tasks for user
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+        '500':
+          description: Failed to fetch tasks
+    post:
+      summary: Create a new task
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                taskCategory:
+                  type: string
+                  enum: [normal, timed]
+                durationMinutes:
+                  type: integer
+      responses:
+        '201':
+          description: Task created
+        '400':
+          description: Validation error
+        '500':
+          description: Internal error
+  /api/tasks/{taskId}/complete:
+    post:
+      summary: Complete a normal image-verifiable task
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                imageBase64:
+                  type: string
+      responses:
+        '200':
+          description: Task completed
+        '400':
+          description: Validation error
+        '404':
+          description: Task not found
+        '500':
+          description: Internal error
+  /api/tasks/{taskId}/complete-normal-non-verifiable:
+    post:
+      summary: Complete a normal non-image-verifiable task
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Task completed
+        '400':
+          description: Validation error
+        '404':
+          description: Task not found
+        '500':
+          description: Internal error
+  /api/tasks/{taskId}/complete-timed:
+    post:
+      summary: Complete a timed task
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                actualDurationSpentMinutes:
+                  type: integer
+      responses:
+        '200':
+          description: Timed task completed
+        '400':
+          description: Validation error
+        '404':
+          description: Task not found
+        '500':
+          description: Internal error
+  /api/tasks/{taskId}/complete-bad:
+    post:
+      summary: Complete a bad task
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Bad task completed
+        '400':
+          description: Validation error
+        '404':
+          description: Task not found
+        '500':
+          description: Internal error
+  /api/tasks/{taskId}/mark-bad:
+    put:
+      summary: Mark a task as bad
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Task marked as bad
+        '400':
+          description: Validation error
+        '404':
+          description: Task not found
+        '500':
+          description: Internal error
+  /api/tasks/{taskId}:
+    delete:
+      summary: Delete a task
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Task deleted
+        '404':
+          description: Task not found
+        '500':
+          description: Internal error
+  /api/social-blocker:
+    post:
+      summary: Setup social blocker
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                socialPassword:
+                  type: string
+                socialEnd:
+                  type: string
+      responses:
+        '200':
+          description: Social blocker setup
+        '400':
+          description: Validation error
+        '500':
+          description: Internal error
+  /api/social-blocker/get:
+    get:
+      summary: Get social blocker info
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Social blocker info
+        '404':
+          description: Not found
+        '500':
+          description: Internal error
+  /api/social-blocker/end:
+    post:
+      summary: End social blocker
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                hasEnded:
+                  type: boolean
+      responses:
+        '200':
+          description: Social blocker ended
+        '500':
+          description: Internal error
+  /api/notifications:
+    post:
+      summary: Send notification and deduct aura
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fcmToken:
+                  type: string
+                userId:
+                  type: string
+      responses:
+        '200':
+          description: Notification sent
+        '400':
+          description: Validation error
+        '500':
+          description: Internal error
+  /api/timetable:
+    post:
+      summary: Generate timetable
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                chapters:
+                  type: object
+                deadline:
+                  type: string
+                clientDate:
+                  type: string
+      responses:
+        '200':
+          description: Timetable generated
+        '400':
+          description: Validation error
+        '500':
+          description: Internal error
+  /api/study-plan:
+    post:
+      summary: Save study plan
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                subjects:
+                  type: object
+                chapters:
+                  type: object
+                deadline:
+                  type: string
+                timetable:
+                  type: array
+                  items:
+                    type: object
+      responses:
+        '201':
+          description: Study plan saved
+        '400':
+          description: Validation error
+        '500':
+          description: Internal error
+    get:
+      summary: Get study plan
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: clientDate
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Study plan
+        '404':
+          description: Not found
+        '500':
+          description: Internal error
+    delete:
+      summary: Delete study plan
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Study plan deleted
+        '500':
+          description: Internal error
+  /api/study-plan/tasks/{taskId}/complete:
+    post:
+      summary: Complete a study plan task
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                clientDate:
+                  type: string
+                dateOfTask:
+                  type: string
+      responses:
+        '200':
+          description: Study plan task completed
+        '400':
+          description: Validation error
+        '404':
+          description: Not found
+        '500':
+          description: Internal error
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
