@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: AurAchieve Backend API
-  description: API for AurAchieve self-improvement app backend
+  description: The official documentation for AurAchieve's backend API, which powers the AurAchieve mobile app.
   version: 1.0.0
 servers:
   - url: https://auraascend-fgf4aqf5gubgacb3.centralindia-01.azurewebsites.net
@@ -13,7 +13,7 @@ paths:
         - bearerAuth: []
       responses:
         '200':
-          description: User profile
+          description: Profile fetched successfully.
           content:
             application/json:
               schema:
@@ -40,7 +40,7 @@ paths:
         - bearerAuth: []
       responses:
         '200':
-          description: List of tasks
+          description: Successfully fetched all the tasks
           content:
             application/json:
               schema:
@@ -51,6 +51,7 @@ paths:
           description: Failed to fetch tasks
     post:
       summary: Create a new task
+      description: This endpoint creates a new task for the user.
       security:
         - bearerAuth: []
       requestBody:
@@ -77,6 +78,7 @@ paths:
   /api/tasks/{taskId}/complete:
     post:
       summary: Complete a normal image-verifiable task
+      description: Marks a normal task as verified.
       security:
         - bearerAuth: []
       parameters:
@@ -106,6 +108,7 @@ paths:
   /api/tasks/{taskId}/complete-normal-non-verifiable:
     post:
       summary: Complete a normal non-image-verifiable task
+      description: Marks a normal non-image-verifiable task as completed.
       security:
         - bearerAuth: []
       parameters:
@@ -126,6 +129,7 @@ paths:
   /api/tasks/{taskId}/complete-timed:
     post:
       summary: Complete a timed task
+      description: Marks a timed task as completed.
       security:
         - bearerAuth: []
       parameters:
@@ -155,6 +159,7 @@ paths:
   /api/tasks/{taskId}/complete-bad:
     post:
       summary: Complete a bad task
+      description: Marks a bad task as complete.
       security:
         - bearerAuth: []
       parameters:
@@ -165,7 +170,7 @@ paths:
             type: string
       responses:
         '200':
-          description: Bad task completed
+          description: Bad task completed successfully
         '400':
           description: Validation error
         '404':
@@ -175,6 +180,7 @@ paths:
   /api/tasks/{taskId}/mark-bad:
     put:
       summary: Mark a task as bad
+      description: Marks a good task as bad.
       security:
         - bearerAuth: []
       parameters:
@@ -195,6 +201,7 @@ paths:
   /api/tasks/{taskId}:
     delete:
       summary: Delete a task
+      description: Deletes a task by its ID.
       security:
         - bearerAuth: []
       parameters:
@@ -213,6 +220,7 @@ paths:
   /api/social-blocker:
     post:
       summary: Setup social blocker
+      description: Sets up the social media blocker with the given password, start and end time.
       security:
         - bearerAuth: []
       requestBody:
@@ -236,6 +244,7 @@ paths:
   /api/social-blocker/get:
     get:
       summary: Get social blocker info
+      description: Get the details about how much the user has progressed through the social media blocker.
       security:
         - bearerAuth: []
       responses:
@@ -248,6 +257,7 @@ paths:
   /api/social-blocker/end:
     post:
       summary: End social blocker
+      description: When the timeout is over, this endpoint is called to end the social media blocker.
       security:
         - bearerAuth: []
       requestBody:
@@ -289,7 +299,8 @@ paths:
           description: Internal error
   /api/timetable:
     post:
-      summary: Generate timetable
+      summary: Generate Study Plan
+      description: This feature is known as "Study Plan" in the app. Internally, it is named timetable.
       security:
         - bearerAuth: []
       requestBody:
@@ -315,6 +326,7 @@ paths:
   /api/study-plan:
     post:
       summary: Save study plan
+      description: If the user is fine with the study plan preview, this endpoint saves it.
       security:
         - bearerAuth: []
       requestBody:
@@ -343,6 +355,7 @@ paths:
           description: Internal error
     get:
       summary: Get study plan
+      description: Gets the study plan whenever needed.
       security:
         - bearerAuth: []
       parameters:
@@ -360,6 +373,7 @@ paths:
           description: Internal error
     delete:
       summary: Delete study plan
+      description: Permanently deletes the study plan of the user so they can setup a new one.
       security:
         - bearerAuth: []
       responses:
@@ -370,6 +384,7 @@ paths:
   /api/study-plan/tasks/{taskId}/complete:
     post:
       summary: Complete a study plan task
+      description: Marks a task from the study plan as complete and gives aura for it.
       security:
         - bearerAuth: []
       parameters:
