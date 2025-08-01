@@ -17,7 +17,7 @@ const PORT = process.env.PORT || 4000;
 
 const serviceAccount = require(process.env.SERVICEACCOUNT);
 
-import { initialize } from 'express-openapi';
+// import { initialize } from 'express-openapi';
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
