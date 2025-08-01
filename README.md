@@ -1,14 +1,14 @@
-# AuraAscend-backend
+# AurAchieve-backend
 
 > [!IMPORTANT]
-> You're currently in the backend repository of AuraAscend, written in ExpressJS. To view the flutter frontend, please visit [this](https://github.com/NiceSapien/AuraAscend) repository instead.
+> You're currently in the backend repository of AurAchieve, written in ExpressJS. To view the flutter frontend, please visit [this](https://github.com/NiceSapien/AurAchieve) repository instead.
 
 
 **Fix your damn life.**
 
-AuraAscend is the only self-improvement app you'll ever need. Earn Aura for every good thing you do. Prove it with AI, a timer, or just your honesty.
+AurAchieve is the only self-improvement app you'll ever need. Earn Aura for every good thing you do. Prove it with AI, a timer, or just your honesty.
 
-Get it now through [GitHub actions](https://github.com/NiceSapien/AuraAscend/actions).
+Get it now through [GitHub actions](https://github.com/NiceSapien/AurAchieve/actions).
 
 ## Self-hosting
 
@@ -31,7 +31,7 @@ Add the following in `profiles` and you'll be done:
 4. Generate a API key with database and auth permissions from appwrite and copy it.
 
 
-5. Download your AuraAscend Firebase project's admin sdk and drop it in a folder named(create new) `privateConfig/`
+5. Download your AurAchieve Firebase project's admin sdk and drop it in a folder named(create new) `privateConfig/`
 
 6. Edit `.env.example` according to the details inside it. Rename it to `.env` afterwards.
 
@@ -63,7 +63,7 @@ There's not much about how to contribute yet. Here's how you may make commits:
 
 `security`: Anything related to the security and safety of the backend. These changes should be compatible with the latest version of the app.
 
-## Sponsor AuraAscend
-If you appreciate AuraAscend, please [sponsor](https://github.com/sponsors/NiceSapien) to keep AuraAscend free forever. You can also do this through [patreon](https://patreon.com/nicesapien), but GitHub sponsors is preferred over Patreon as it charges less. This repository could be locked under a sponsorship paywall. However, it is being provided free for everyone, forever. AuraAscend is even licensed under the most open MIT license.
+## Sponsor AurAchieve
+If you appreciate AurAchieve, please [sponsor](https://github.com/sponsors/NiceSapien) to keep AurAchieve free forever. You can also do this through [patreon](https://patreon.com/nicesapien), but GitHub sponsors is preferred over Patreon as it charges less. This repository could be locked under a sponsorship paywall. However, it is being provided free for everyone, forever. AurAchieve is even licensed under the most open MIT license.
 
 More about sponsorships [here](https://github.com/nicesapien/auraascend?tab=readme-ov-file#sponsors).

@@ -17,6 +17,8 @@ const PORT = process.env.PORT || 4000;
 
 const serviceAccount = require(process.env.SERVICEACCOUNT);
 
+import { initialize } from 'express-openapi';
+
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
 });
@@ -27,7 +29,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Basic Route
 app.get('/', (req, res) => {
-    res.send('AuraAscend API Running!');
+    res.send('AurAchieve API Running!');
 });
 
 // API Routes
