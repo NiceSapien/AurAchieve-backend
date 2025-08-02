@@ -298,6 +298,7 @@ paths:
         '500':
           description: Internal error
   /api/timetable:
+    summary: Study plan
     post:
       summary: Generate Study Plan
       description: This feature is known as "Study Plan" in the app. Internally, it is named timetable.
