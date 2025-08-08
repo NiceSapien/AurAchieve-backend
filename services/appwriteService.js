@@ -4,6 +4,10 @@ async function updateUserAura(userId, newAura) {
     return databases.updateDocument(dbId, profilesCollectionId, userId, { aura: newAura });
 }
 
+async function increaseUserAura(userId, incrementAura) {
+    return databases.incrementDocumentAttribute(dbId, profilesCollectionId, userId, 'aura', incrementAura);
+}
+
 async function updateUserValidationStats(userId, count, date) {
     return databases.updateDocument(dbId, profilesCollectionId, userId, {
         validationCount: count,
@@ -246,6 +250,7 @@ async function getTaskById(taskId) {
 
 module.exports = {
     updateUserAura,
+    increaseUserAura,
     updateUserValidationStats,
     getUserTasks,
     createTask,

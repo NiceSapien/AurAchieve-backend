@@ -62,11 +62,12 @@ router.post('/end', authMiddleware, async (req, res) => {
             console.log(profile.socialEnd)
             console.log(`day be like ${day} and date be like ${date}`)
             if (auraChange == profile.socialStart && day >= profile.socialEnd) {
-                await appwriteService.updateUserAura(userId, profile.socialDays * 15);
+                await appwriteService.increaseUserAura(userId, profile.socialDays * 15);
                 res.json({
                     socialPassword: profile.socialPassword,
                     socialEnd: profile.socialEnd,
                     socialStart: profile.socialStart,
+                    aura: profile.socialDays * 15,
                 });
                 const resetProfile = await appwriteService.resetSocialBlocker(userId);
                 console.log(resetProfile)
