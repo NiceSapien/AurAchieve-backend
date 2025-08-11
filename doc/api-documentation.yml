@@ -260,45 +260,12 @@ paths:
       description: When the timeout is over, this endpoint is called to end the social media blocker.
       security:
         - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                hasEnded:
-                  type: boolean
       responses:
         '200':
           description: Social blocker ended
         '500':
           description: Internal error
-  /api/notifications:
-    post:
-      summary: Send notification and deduct aura
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                fcmToken:
-                  type: string
-                userId:
-                  type: string
-      responses:
-        '200':
-          description: Notification sent
-        '400':
-          description: Validation error
-        '500':
-          description: Internal error
-  /api/timetable:
-    summary: Study plan
+  /api/study-plan/generate:
     post:
       summary: Generate Study Plan
       description: This feature is known as "Study Plan" in the app. Internally, it is named timetable.

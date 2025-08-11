@@ -4,6 +4,34 @@ const authMiddleware = require('../middleware/authMiddleware');
 const appwriteService = require('../services/appwriteService');
 const { requestTimetableGen } = require('../services/geminiService');
 
+router.post('/generate', authMiddleware, async (req, res) => {
+    try {
+        const { chapters, deadline, clientDate } = req.body;
+        if (!chapters || !deadline || !clientDate) {
+            return res.status(400).json({ error: 'Missing required fields for timetable generation.' });
+        }
+
+        const allChaptersWithSubjects = Object.entries(chapters).flatMap(([subject, chapterList]) => 
+            chapterList.map(chapter => ({
+                ...chapter,
+                subject: subject
+            }))
+        );
+
+        const timetablePayload = {
+            chapters: allChaptersWithSubjects,
+            deadline: deadline,
+            startDate: clientDate,
+        };
+
+        const generatedPlan = await requestTimetableGen(timetablePayload);
+        res.json(generatedPlan);
+    } catch (error) {
+        console.error('Error in timetable generation route:', error);
+        res.status(500).json({ error: 'Failed to generate timetable preview.' });
+    }
+});
+
 router.post('/', authMiddleware, async (req, res) => {
     try {
         const userId = req.user.$id;

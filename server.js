@@ -34,9 +34,8 @@ app.get('/', (req, res) => {
 app.use('/api/user', userRoutes)
 app.use('/api/tasks', taskRoutes);
 app.use('/api/social-blocker', socialBlockerRoutes);
-app.use('/api/notifications', notificationRoutes);
-app.use('/api/timetable', timetableRoutes);
 app.use('/api/study-plan', studyPlanRoutes);
+// app.use('/api/notifications', notificationRoutes);
 
 // Global error handler
 app.use((err, req, res, next) => {

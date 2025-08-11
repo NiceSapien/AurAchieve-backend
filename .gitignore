@@ -138,3 +138,6 @@ dist
 # lockfile
 package-lock.json
 privateConfig/
+
+
+doc/deploy.sh

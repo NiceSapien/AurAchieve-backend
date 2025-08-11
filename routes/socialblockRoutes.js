@@ -48,19 +48,13 @@ router.post('/end', authMiddleware, async (req, res) => {
         date.setDate(date.getDate() - days);
         return date.toISOString().split('T')[0]; 
     }
-    console.log("pro");
     const userId = req.user.$id;
-    const { hasEnded } = req.body;
-    console.log(hasEnded)
     try {
         const profile = await appwriteService.getOrSetupSocialBlocker(userId);
-        if (hasEnded === true) {
 
             const date = new Date(profile.socialEnd);
             const day = new Date().toISOString().split('T')[0];
             const auraChange = subtractDaysFromDate(profile.socialEnd, profile.socialDays);
-            console.log(profile.socialEnd)
-            console.log(`day be like ${day} and date be like ${date}`)
             if (auraChange == profile.socialStart && day >= profile.socialEnd) {
                 await appwriteService.increaseUserAura(userId, profile.socialDays * 15);
                 res.json({
@@ -70,10 +64,6 @@ router.post('/end', authMiddleware, async (req, res) => {
                     aura: profile.socialDays * 15,
                 });
                 const resetProfile = await appwriteService.resetSocialBlocker(userId);
-                console.log(resetProfile)
-            } else {
-                res.status(500).json({ message: 'Failed to update Aura as days not completed yet.' });
-            }
         }
     } catch (error) {
         console.log(error);
