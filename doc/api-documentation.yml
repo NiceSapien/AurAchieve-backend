@@ -46,12 +46,13 @@ paths:
               schema:
                 type: array
                 items:
-                  type: object
+                  $ref: '#/components/schemas/Task'
         '500':
           description: Failed to fetch tasks
     post:
       summary: Create a new task
-      description: This endpoint creates a new task for the user.
+      description: |
+        Creates a new user task. Intensity, type, and isImageVerifiable are determined by the backend.
       security:
         - bearerAuth: []
       requestBody:
@@ -63,22 +64,33 @@ paths:
               properties:
                 name:
                   type: string
+                  example: "Read Chapter 1"
                 taskCategory:
                   type: string
                   enum: [normal, timed]
+                  example: "timed"
                 durationMinutes:
                   type: integer
+                  example: 45
+              required:
+                - name
+                - taskCategory
       responses:
         '201':
           description: Task created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
         '400':
           description: Validation error
         '500':
           description: Internal error
+
   /api/tasks/{taskId}/complete:
     post:
       summary: Complete a normal image-verifiable task
-      description: Marks a normal task as verified.
+      description: Marks a normal image-verifiable task as completed (requires image).
       security:
         - bearerAuth: []
       parameters:
@@ -96,19 +108,28 @@ paths:
               properties:
                 imageBase64:
                   type: string
+                  description: Base64-encoded image for verification.
+                  example: "/9j/4AAQSkZJRgABAQAAAQABAAD..."
+              required:
+                - imageBase64
       responses:
         '200':
           description: Task completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskCompletionResponse'
         '400':
           description: Validation error
         '404':
           description: Task not found
         '500':
           description: Internal error
+
   /api/tasks/{taskId}/complete-normal-non-verifiable:
     post:
       summary: Complete a normal non-image-verifiable task
-      description: Marks a normal non-image-verifiable task as completed.
+      description: Marks a normal non-image-verifiable task as completed (honor system).
       security:
         - bearerAuth: []
       parameters:
@@ -120,12 +141,17 @@ paths:
       responses:
         '200':
           description: Task completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskCompletionResponse'
         '400':
           description: Validation error
         '404':
           description: Task not found
         '500':
           description: Internal error
+
   /api/tasks/{taskId}/complete-timed:
     post:
       summary: Complete a timed task
@@ -139,7 +165,7 @@ paths:
           schema:
             type: string
       requestBody:
-        required: true
+        required: false
         content:
           application/json:
             schema:
@@ -147,19 +173,26 @@ paths:
               properties:
                 actualDurationSpentMinutes:
                   type: integer
+                  description: Actual minutes spent on the task (optional).
+                  example: 42
       responses:
         '200':
           description: Timed task completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskCompletionResponse'
         '400':
           description: Validation error
         '404':
           description: Task not found
         '500':
           description: Internal error
+
   /api/tasks/{taskId}/complete-bad:
     post:
       summary: Complete a bad task
-      description: Marks a bad task as complete.
+      description: Marks a bad task as completed (user admits to doing a bad habit).
       security:
         - bearerAuth: []
       parameters:
@@ -171,16 +204,21 @@ paths:
       responses:
         '200':
           description: Bad task completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskCompletionResponse'
         '400':
           description: Validation error
         '404':
           description: Task not found
         '500':
           description: Internal error
+
   /api/tasks/{taskId}/mark-bad:
     put:
       summary: Mark a task as bad
-      description: Marks a good task as bad.
+      description: Marks a good task as bad (user admits to failing a good habit).
       security:
         - bearerAuth: []
       parameters:
@@ -192,12 +230,17 @@ paths:
       responses:
         '200':
           description: Task marked as bad
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
         '400':
           description: Validation error
         '404':
           description: Task not found
         '500':
           description: Internal error
+
   /api/tasks/{taskId}:
     delete:
       summary: Delete a task
@@ -280,10 +323,25 @@ paths:
               properties:
                 chapters:
                   type: object
+                  example:
+                    Mathematics:
+                      - number: "1"
+                        chapterName: "Algebra"
+                      - number: "2"
+                        chapterName: "Calculus"
+                    Physics:
+                      - number: "1"
+                        chapterName: "Kinematics"
+                      - number: "2"
+                        chapterName: "Dynamics"
                 deadline:
                   type: string
+                  format: date-time
+                  example: "2025-12-31"
                 clientDate:
                   type: string
+                  format: date-time
+                  example: "2025-12-13"
       responses:
         '200':
           description: Timetable generated
@@ -387,3 +445,62 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
+
+  schemas:
+    Task:
+      type: object
+      properties:
+        $id:
+          type: string
+          description: Unique task ID
+          example: "65f2e3b8c2a1b"
+        name:
+          type: string
+          example: "Read Chapter 1"
+        intensity:
+          type: string
+          enum: [easy, medium, hard]
+          example: "easy"
+        type:
+          type: string
+          enum: [good, bad]
+          example: "good"
+        taskCategory:
+          type: string
+          enum: [normal, timed]
+          example: "timed"
+        durationMinutes:
+          type: integer
+          nullable: true
+          example: 45
+        isImageVerifiable:
+          type: boolean
+          example: false
+        status:
+          type: string
+          enum: [pending, completed]
+          example: "pending"
+        userId:
+          type: string
+          example: "user_abc123"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2025-08-11T12:00:00Z"
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2025-08-12T14:30:00Z"
+
+    TaskCompletionResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Task completed successfully."
+        auraChange:
+          type: integer
+          example: 30
+        completedTask:
+          $ref: '#/components/schemas/Task'
