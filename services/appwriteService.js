@@ -1,4 +1,4 @@
-const { databases, dbId, profilesCollectionId, tasksCollectionId, studyPlansCollectionId, ID, Query } = require('../config/appwriteClient');
+const { databases, dbId, profilesCollectionId, tasksCollectionId, studyPlansCollectionId, habitCollectionId, ID, Query } = require('../config/appwriteClient');
 
 async function updateUserAura(userId, newAura) {
     return databases.updateDocument(dbId, profilesCollectionId, userId, { aura: newAura });
@@ -248,6 +248,38 @@ async function getTaskById(taskId) {
     }
 }
 
+const createHabit = async (userId, data) => {
+    try {
+        const document = await databases.createDocument(
+            dbId,
+            habitCollectionId,
+            ID.unique(),
+            {
+                habitName: data.habitName,
+                habitLocation: data.habitLocation,
+                habitGoal: data.habitGoal,
+                userId: userId,
+                completedTimes: 0,
+            }
+        );
+        return document;
+    } catch (error) {
+        console.error('Appwrite createHabit error:', error);
+        throw error;
+    }
+};
+
+
+const getHabits = async (userId) => {
+    return databases.listDocuments(dbId, habitCollectionId, [
+        Query.equal('userId', userId)
+    ]);
+}
+
+async function completeHabit(userId, habitId) {
+return databases.incrementDocumentAttribute(dbId, habitCollectionId, habitId, 'completedTimes', 1);
+}
+
 module.exports = {
     updateUserAura,
     increaseUserAura,
@@ -265,4 +297,7 @@ module.exports = {
     updateTaskType,
     deleteTask,
     getTaskById,
+    createHabit,
+    getHabits,
+    completeHabit,
 };

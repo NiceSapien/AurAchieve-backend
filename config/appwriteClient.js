@@ -21,4 +21,5 @@ module.exports = {
     profilesCollectionId: process.env.PROFILES_COLLECTION_ID,
     tasksCollectionId: process.env.TASKS_COLLECTION_ID,
     studyPlansCollectionId: process.env.STUDY_PLAN_COLLECTION_ID,
+    habitCollectionId: process.env.HABIT_COLLECTION_ID,
 };

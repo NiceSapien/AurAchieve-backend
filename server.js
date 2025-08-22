@@ -4,22 +4,23 @@ const express = require('express');
 const dotenv = require('dotenv');
 const taskRoutes = require('./routes/taskRoutes');
 const socialBlockerRoutes = require('./routes/socialblockRoutes');
-const notificationRoutes = require('./routes/notifyRoutes');
-const timetableRoutes = require('./routes/timetableRoutes');
+//const notificationRoutes = require('./routes/notifyRoutes');
+//const timetableRoutes = require('./routes/timetableRoutes');
 const studyPlanRoutes = require('./routes/studyPlanRoutes');
 const userRoutes = require('./routes/userRoutes');
-const admin = require('firebase-admin');
+// const admin = require('firebase-admin');
+const habitRoutes = require('./routes/habitRoutes');
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-const serviceAccount = require(process.env.SERVICEACCOUNT);
+// const serviceAccount = require(process.env.SERVICEACCOUNT);
 
-admin.initializeApp({
+/*admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
-});
+});*/
 
 // Middleware
 app.use(express.json({ limit: '10mb' }));
@@ -35,6 +36,7 @@ app.use('/api/user', userRoutes)
 app.use('/api/tasks', taskRoutes);
 app.use('/api/social-blocker', socialBlockerRoutes);
 app.use('/api/study-plan', studyPlanRoutes);
+app.use('/api/habit', habitRoutes);
 // app.use('/api/notifications', notificationRoutes);
 
 // Global error handler
