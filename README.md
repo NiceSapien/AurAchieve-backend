@@ -66,4 +66,4 @@ There's not much about how to contribute yet. Here's how you may make commits:
 ## Sponsor AurAchieve
 If you appreciate AurAchieve, please [sponsor](https://github.com/sponsors/NiceSapien) to keep AurAchieve free forever. You can also do this through [patreon](https://patreon.com/nicesapien), but GitHub sponsors is preferred over Patreon as it charges less. This repository could be locked under a sponsorship paywall. However, it is being provided free for everyone, forever. AurAchieve is even licensed under the most open MIT license.
 
-More about sponsorships [here](https://github.com/nicesapien/auraascend?tab=readme-ov-file#sponsors).
+More about sponsorships [here](https://github.com/nicesapien/aurachieve?tab=readme-ov-file#sponsors).
