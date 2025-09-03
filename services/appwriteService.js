@@ -1,4 +1,5 @@
-const { databases, dbId, profilesCollectionId, tasksCollectionId, studyPlansCollectionId, habitCollectionId, ID, Query } = require('../config/appwriteClient');
+const { Databases } = require('node-appwrite');
+const { databases, tablesDB, dbId, profilesCollectionId, tasksCollectionId, studyPlansCollectionId, habitCollectionId, ID, Query } = require('../config/appwriteClient');
 
 async function updateUserAura(userId, newAura) {
     return databases.updateDocument(dbId, profilesCollectionId, userId, { aura: newAura });
@@ -260,8 +261,10 @@ const createHabit = async (userId, data) => {
                 habitGoal: data.habitGoal,
                 userId: userId,
                 completedTimes: 0,
+                completedDays: data.completedDays.toString(),
             }
         );
+        console.log(data.completedDays)
         return document;
     } catch (error) {
         console.error('Appwrite createHabit error:', error);
@@ -273,11 +276,26 @@ const createHabit = async (userId, data) => {
 const getHabits = async (userId) => {
     return databases.listDocuments(dbId, habitCollectionId, [
         Query.equal('userId', userId)
-    ]);
+    ]); 
 }
 
-async function completeHabit(userId, habitId) {
-return databases.incrementDocumentAttribute(dbId, habitCollectionId, habitId, 'completedTimes', 1);
+async function completeHabit(userId, habitId, completedDays) {
+    console.log(completedDays);
+    try {
+    databases.incrementDocumentAttribute(dbId, habitCollectionId, habitId, 'completedTimes', 1);
+   return databases.updateDocument(dbId, habitCollectionId, habitId, {'completedDays': completedDays});
+    } catch (error) {
+        console.log("boom")
+        console.log(error);
+        throw error;
+    }
+}
+async function deleteHabit(habitId) {
+    tablesDB.deleteRow(
+    dbId,
+    habitCollectionId,
+    habitId
+);
 }
 
 module.exports = {
@@ -289,7 +307,7 @@ module.exports = {
     getOrCreateUserProfile,
     getOrSetupSocialBlocker,
     resetSocialBlocker,
-    createStudyPlan,
+    createStudyPlan, 
     getStudyPlan,
     updateStudyPlan,
     deleteStudyPlan,
@@ -300,4 +318,5 @@ module.exports = {
     createHabit,
     getHabits,
     completeHabit,
+    deleteHabit,
 };
