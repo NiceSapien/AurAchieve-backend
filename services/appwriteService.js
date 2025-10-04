@@ -119,13 +119,51 @@ const createStudyPlan = async (userId, planData) => {
     }
 };
 
-const getStudyPlan = async (userId) => {
+const getStudyPlan = async (userId, clientDate) => {
     try {
-        const plan = await databases.getDocument(
+        let plan = await databases.getDocument(
             dbId,
             studyPlansCollectionId,
             userId
         );
+        if (!clientDate) {
+            return 'Client date is required.';
+        }
+        if (!plan) {
+            return 'No study plan found for this user.';
+        }
+
+        plan.subjects = JSON.parse(plan.subjects);
+        plan.chapters = JSON.parse(plan.chapters);
+        plan.timetable = JSON.parse(plan.timetable);
+
+        const today = new Date(clientDate);
+        today.setHours(0, 0, 0, 0);
+        const lastChecked = new Date(plan.lastCheckedDate);
+        lastChecked.setHours(0, 0, 0, 0);
+
+        let auraToDeduct = 0;
+
+        if(lastChecked < today) {
+            for (let d = new Date(lastChecked); d < today; d.setDate(d.getDate() + 1)) {
+                const dateString = d.toISOString().split('T')[0];
+                const dayInTimetable = plan.timetable.find(t => t.date === dateString);
+                if (dayInTimetable && dayInTimetable.tasks.some(task => !task.completed)) {
+                    auraToDeduct += 35;
+                }
+            }
+        }
+
+        if (auraToDeduct > 0) {
+            const userProfile = await appwriteService.getOrCreateUserProfile(userId);
+            const newAura = (userProfile.aura || 0) - auraToDeduct;
+            await appwriteService.updateUserAura(userId, newAura);
+        }
+
+        if (plan.lastCheckedDate !== clientDate) {
+            plan = await appwriteService.updateStudyPlan(plan.$id, { lastCheckedDate: clientDate });
+            plan = await appwriteService.getStudyPlan(userId);
+        }
         return plan;
     } catch (error) {
         if (error.code === 404) {

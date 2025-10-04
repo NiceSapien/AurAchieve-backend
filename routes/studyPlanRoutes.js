@@ -79,49 +79,8 @@ router.post('/', authMiddleware, async (req, res) => {
 router.get('/', authMiddleware, async (req, res) => {
     try {
         const userId = req.user.$id;
-        const { clientDate } = req.query; 
-
-        if (!clientDate) {
-            return res.status(400).json({ error: 'Client date is required.' });
-        }
-
-        let plan = await appwriteService.getStudyPlan(userId);
-
-        if (!plan) {
-            return res.status(404).json({ message: 'No study plan found for this user.' });
-        }
-
-        plan.subjects = JSON.parse(plan.subjects);
-        plan.chapters = JSON.parse(plan.chapters);
-        plan.timetable = JSON.parse(plan.timetable);
-
-        const today = new Date(clientDate);
-        today.setHours(0, 0, 0, 0);
-        const lastChecked = new Date(plan.lastCheckedDate);
-        lastChecked.setHours(0, 0, 0, 0);
-
-        let auraToDeduct = 0;
-
-        if(lastChecked < today) {
-            for (let d = new Date(lastChecked); d < today; d.setDate(d.getDate() + 1)) {
-                const dateString = d.toISOString().split('T')[0];
-                const dayInTimetable = plan.timetable.find(t => t.date === dateString);
-                if (dayInTimetable && dayInTimetable.tasks.some(task => !task.completed)) {
-                    auraToDeduct += 35;
-                }
-            }
-        }
-
-        if (auraToDeduct > 0) {
-            const userProfile = await appwriteService.getOrCreateUserProfile(userId);
-            const newAura = (userProfile.aura || 0) - auraToDeduct;
-            await appwriteService.updateUserAura(userId, newAura);
-        }
-
-        if (plan.lastCheckedDate !== clientDate) {
-            plan = await appwriteService.updateStudyPlan(plan.$id, { lastCheckedDate: clientDate });
-        }
-
+        const { clientDate } = req.query;
+        let plan = await appwriteService.getStudyPlan(userId, clientDate);
         res.json(plan);
     } catch (error) {
         console.error('Error fetching study plan:', error);

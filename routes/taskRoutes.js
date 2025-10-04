@@ -3,6 +3,8 @@ const router = express.Router();
 const authMiddleware = require('../middleware/authMiddleware'); 
 const { verifyTaskWithGemini, classifyTaskWithGemini } = require('../services/geminiService'); 
 const appwriteService = require('../services/appwriteService'); 
+const quotes = require('../quotes');
+
 
 const DAILY_VALIDATION_LIMIT = 200;
 
@@ -13,10 +15,26 @@ router.get('/', authMiddleware, async (req, res) => {
     console.log("GET /api/tasks: Received request");
     try {
         const userId = req.user.$id; 
+        const userName = req.user.name;
+        const userEmail = req.user.email;
+        const { clientDate } = req.query;
         console.log(`GET /api/tasks: Fetching tasks for userId: ${userId}`);
         const tasksResult = await appwriteService.getUserTasks(userId);
-        console.log("GET /api/tasks: Tasks fetched successfully:", tasksResult.documents.length);
-        res.json(tasksResult.documents);
+        const habitsResult = await appwriteService.getHabits(userId);
+        let plan = await appwriteService.getStudyPlan(userId, clientDate);
+        const profile = await appwriteService.getOrCreateUserProfile(userId, userName, userEmail);
+        res.json({
+            tasks: tasksResult.documents,
+            habits: habitsResult.documents,
+            studyPlan: plan,
+            userId: profile.userId || userId, 
+            name: userName,
+            email: userEmail,
+            aura: profile.aura,
+            validationCount: profile.validationCount,
+            lastValidationResetDate: profile.lastValidationResetDate,
+            quote: {quote: quotes, author: "NiceSapien"}
+        });
     } catch (error) {
         console.error("GET /api/tasks: Error fetching tasks:", error);
         res.status(500).json({ message: 'Failed to fetch tasks' });

@@ -28,9 +28,8 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Basic Route
 app.get('/', (req, res) => {
-    res.send('AuraAscend API Running!');
+    res.send('feel alive.');
 });
-
 // API Routes
 app.use('/api/user', userRoutes)
 app.use('/api/tasks', taskRoutes);
