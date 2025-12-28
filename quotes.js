@@ -30,7 +30,7 @@ const quotes = [
     "The key to success is to focus on goals, not obstacles.",
     "Dream it. Believe it. Build it.",
     "Act as if what you do makes a difference. It does.",
-    "Success usually comes to those who are too busy to be looking for it.",
+    "Success usually comes to those who are too busy looking for it.",
     "Don’t be pushed around by the fears in your mind. Be led by the dreams in your heart.",
     "The only way to achieve the impossible is to believe it is possible.",
     "Opportunities don't happen. You create them.",

@@ -21,11 +21,13 @@ router.get('/', authMiddleware, async (req, res) => {
         console.log(`GET /api/tasks: Fetching tasks for userId: ${userId}`);
         const tasksResult = await appwriteService.getUserTasks(userId);
         const habitsResult = await appwriteService.getHabits(userId);
+        const badHabitsResult = await appwriteService.getBadHabits(userId);
         let plan = await appwriteService.getStudyPlan(userId, clientDate);
         const profile = await appwriteService.getOrCreateUserProfile(userId, userName, userEmail);
         res.json({
             tasks: tasksResult.documents,
             habits: habitsResult.documents,
+            badHabits: badHabitsResult.documents,
             studyPlan: plan,
             userId: profile.userId || userId, 
             name: userName,

@@ -1,4 +1,4 @@
-const { Client, Databases, Users, ID, Query, TablesDB } = require('node-appwrite');
+const { Client, Users, ID, Query, TablesDB } = require('node-appwrite');
 require('dotenv').config();
 
 const client = new Client();
@@ -8,13 +8,11 @@ client
     .setProject(process.env.APPWRITE_PROJECT_ID)
     .setKey(process.env.APPWRITE_API_KEY); 
 
-const databases = new Databases(client);
 const tablesDB = new TablesDB(client);
 const users = new Users(client); 
 
 module.exports = {
     client,
-    databases,
     tablesDB,
     users,
     ID,

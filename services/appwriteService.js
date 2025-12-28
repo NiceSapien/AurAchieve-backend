@@ -1,26 +1,73 @@
-const { Databases } = require('node-appwrite');
-const { databases, tablesDB, dbId, profilesCollectionId, tasksCollectionId, studyPlansCollectionId, habitCollectionId, ID, Query } = require('../config/appwriteClient');
+const { tablesDB, dbId, profilesCollectionId, tasksCollectionId, studyPlansCollectionId, habitCollectionId, ID, Query } = require('../config/appwriteClient');
+
+const badHabitsCollectionId = process.env.BAD_HABITS_COLLECTION_ID || 'badhabits';
+
+function severityToAuraLoss(severity) {
+    switch ((severity || '').toLowerCase()) {
+        case 'average':
+            return 5;
+        case 'high':
+            return 10;
+        case 'vhigh':
+            return 15;
+        case 'extreme':
+            return 20;
+        default:
+            return null;
+    }
+}
+
+function normalizeRowListToDocumentList(list) {
+    if (!list || typeof list !== 'object') return list;
+    if (Array.isArray(list.documents) || Array.isArray(list.rows)) return {
+        ...list,
+        documents: list.documents ?? list.rows,
+        rows: list.rows ?? list.documents,
+    };
+    return list;
+}
 
 async function updateUserAura(userId, newAura) {
-    return databases.updateDocument(dbId, profilesCollectionId, userId, { aura: newAura });
+    return tablesDB.updateRow({
+        databaseId: dbId,
+        tableId: profilesCollectionId,
+        rowId: userId,
+        data: { aura: newAura },
+    });
 }
 
 async function increaseUserAura(userId, incrementAura) {
-    return databases.incrementDocumentAttribute(dbId, profilesCollectionId, userId, 'aura', incrementAura);
+    return tablesDB.incrementRowColumn({
+        databaseId: dbId,
+        tableId: profilesCollectionId,
+        rowId: userId,
+        column: 'aura',
+        value: incrementAura,
+    });
 }
 
 async function updateUserValidationStats(userId, count, date) {
-    return databases.updateDocument(dbId, profilesCollectionId, userId, {
-        validationCount: count,
-        lastValidationResetDate: date,
+    return tablesDB.updateRow({
+        databaseId: dbId,
+        tableId: profilesCollectionId,
+        rowId: userId,
+        data: {
+            validationCount: count,
+            lastValidationResetDate: date,
+        },
     });
 }
 
 async function getUserTasks(userId) {
-    return databases.listDocuments(dbId, tasksCollectionId, [
-        Query.equal('userId', userId),
-        Query.orderDesc('createdAt')
-    ]);
+    const rows = await tablesDB.listRows({
+        databaseId: dbId,
+        tableId: tasksCollectionId,
+        queries: [
+            Query.equal('userId', userId),
+            Query.orderDesc('createdAt'),
+        ],
+    });
+    return normalizeRowListToDocumentList(rows);
 }
 
 const createTask = async (userId, taskData) => {
@@ -38,11 +85,11 @@ const createTask = async (userId, taskData) => {
             createdAt: new Date().toISOString(),
             completedAt: null,
         });
-        const document = await databases.createDocument(
-            process.env.APPWRITE_DATABASE_ID,
-            tasksCollectionId,
-            ID.unique(),
-            {
+        const row = await tablesDB.createRow({
+            databaseId: dbId,
+            tableId: tasksCollectionId,
+            rowId: ID.unique(),
+            data: {
                 userId: userId,
                 name: taskData.name,
                 intensity: taskData.intensity,
@@ -53,9 +100,9 @@ const createTask = async (userId, taskData) => {
                 status: 'pending',
                 createdAt: new Date().toISOString(),
                 completedAt: null,
-            }
-        );
-        return document;
+            },
+        });
+        return row;
     } catch (error) {
         console.error('Appwrite createTask error:', error);
         console.error('Appwrite createTask error code:', error.code);
@@ -67,29 +114,28 @@ const createTask = async (userId, taskData) => {
 
 const getOrCreateUserProfile = async (userId, name, email) => {
     try {
-        const profile = await databases.getDocument(
-            dbId,
-            profilesCollectionId,
-            userId
-        );
+        const profile = await tablesDB.getRow({
+            databaseId: dbId,
+            tableId: profilesCollectionId,
+            rowId: userId,
+        });
         return profile;
     } catch (error) {
         if (error.code === 404) {
             try {
-                const newProfile = await databases.createDocument(
-                    dbId,
-                    profilesCollectionId,
-                    userId,
-                    {
+                const newProfile = await tablesDB.createRow({
+                    databaseId: dbId,
+                    tableId: profilesCollectionId,
+                    rowId: userId,
+                    data: {
                         userId: userId,
                         name: name,
                         email: email,
                         aura: 50,
                         validationCount: 0,
                         lastValidationResetDate: new Date().toISOString().split('T')[0],
-
-                    }
-                );
+                    },
+                });
                 return newProfile;
             } catch (creationError) {
                 console.error('Appwrite create new user profile error:', creationError);
@@ -103,16 +149,16 @@ const getOrCreateUserProfile = async (userId, name, email) => {
 
 const createStudyPlan = async (userId, planData) => {
     try {
-        const document = await databases.createDocument(
-            dbId,
-            studyPlansCollectionId,
-            userId, 
-            {
+        const row = await tablesDB.createRow({
+            databaseId: dbId,
+            tableId: studyPlansCollectionId,
+            rowId: userId,
+            data: {
                 ...planData,
                 userId: userId,
-            }
-        );
-        return document;
+            },
+        });
+        return row;
     } catch (error) {
         console.error('Appwrite createStudyPlan error:', error);
         throw error;
@@ -121,16 +167,17 @@ const createStudyPlan = async (userId, planData) => {
 
 const getStudyPlan = async (userId, clientDate) => {
     try {
-        let plan = await databases.getDocument(
-            dbId,
-            studyPlansCollectionId,
-            userId
-        );
-        if (!clientDate) {
-            return 'Client date is required.';
-        }
+        let plan = await tablesDB.getRow({
+            databaseId: dbId,
+            tableId: studyPlansCollectionId,
+            rowId: userId,
+        });
         if (!plan) {
             return 'No study plan found for this user.';
+        }
+
+        if (!clientDate) {
+            return plan;
         }
 
         plan.subjects = JSON.parse(plan.subjects);
@@ -155,14 +202,14 @@ const getStudyPlan = async (userId, clientDate) => {
         }
 
         if (auraToDeduct > 0) {
-            const userProfile = await appwriteService.getOrCreateUserProfile(userId);
+            const userProfile = await getOrCreateUserProfile(userId);
             const newAura = (userProfile.aura || 0) - auraToDeduct;
-            await appwriteService.updateUserAura(userId, newAura);
+            await updateUserAura(userId, newAura);
         }
 
         if (plan.lastCheckedDate !== clientDate) {
-            plan = await appwriteService.updateStudyPlan(plan.$id, { lastCheckedDate: clientDate });
-            plan = await appwriteService.getStudyPlan(userId);
+            await updateStudyPlan(plan.$id, { lastCheckedDate: clientDate });
+            plan.lastCheckedDate = clientDate;
         }
         return plan;
     } catch (error) {
@@ -176,12 +223,12 @@ const getStudyPlan = async (userId, clientDate) => {
 
 const updateStudyPlan = async (planId, data) => {
     try {
-        const updatedPlan = await databases.updateDocument(
-            dbId,
-            studyPlansCollectionId,
-            planId,
-            data
-        );
+        const updatedPlan = await tablesDB.updateRow({
+            databaseId: dbId,
+            tableId: studyPlansCollectionId,
+            rowId: planId,
+            data,
+        });
         return updatedPlan;
     } catch (error) {
         console.error('Appwrite updateStudyPlan error:', error);
@@ -191,11 +238,11 @@ const updateStudyPlan = async (planId, data) => {
 
 const deleteStudyPlan = async (planId) => {
     try {
-        await databases.deleteDocument(
-            dbId,
-            studyPlansCollectionId,
-            planId
-        );
+        await tablesDB.deleteRow({
+            databaseId: dbId,
+            tableId: studyPlansCollectionId,
+            rowId: planId,
+        });
     } catch (error) {
         console.error('Appwrite deleteStudyPlan error:', error);
         throw error;
@@ -204,11 +251,11 @@ const deleteStudyPlan = async (planId) => {
 
 const getOrSetupSocialBlocker = async (userId, socialPassword, socialEnd) => {
     try {
-        const profile = await databases.getDocument(
-            dbId,
-            profilesCollectionId,
-            userId
-        );
+        const profile = await tablesDB.getRow({
+            databaseId: dbId,
+            tableId: profilesCollectionId,
+            rowId: userId,
+        });
 
         if (profile['socialEnd'] == null || profile['socialEnd'] == "") {
             throw new Error("Not found");
@@ -229,17 +276,17 @@ const getOrSetupSocialBlocker = async (userId, socialPassword, socialEnd) => {
                 date.setDate(date.getDate() + days);
                 return date.toISOString().split('T')[0]; 
             }
-            const newBlocker = await databases.updateDocument(
-                dbId,
-                profilesCollectionId,
-                userId,
-                {
+            const newBlocker = await tablesDB.updateRow({
+                databaseId: dbId,
+                tableId: profilesCollectionId,
+                rowId: userId,
+                data: {
                     socialPassword: socialPassword,
                     socialDays: socialEnd,
                     socialEnd: addDaysToDate(formattedDate, socialEnd),
                     socialStart: formattedDate,
-                }
-            );
+                },
+            });
             console.log("boom")
             return newBlocker;
         } catch (creationError) {
@@ -249,18 +296,18 @@ const getOrSetupSocialBlocker = async (userId, socialPassword, socialEnd) => {
     }
 }
 const resetSocialBlocker = async (userId) => {
-                const newBlocker = await databases.updateDocument(
-                dbId,
-                profilesCollectionId,
-                userId,
-                {
-                    socialPassword: null,
-                    socialDays: null,
-                    socialEnd: null,
-                    socialStart: null,
-                }
-            );
-            return newBlocker;
+    const newBlocker = await tablesDB.updateRow({
+        databaseId: dbId,
+        tableId: profilesCollectionId,
+        rowId: userId,
+        data: {
+            socialPassword: null,
+            socialDays: null,
+            socialEnd: null,
+            socialStart: null,
+        },
+    });
+    return newBlocker;
 }
 
 async function updateTaskStatus(taskId, status, completedAt = null) {
@@ -268,19 +315,37 @@ async function updateTaskStatus(taskId, status, completedAt = null) {
     if (completedAt) {
         dataToUpdate.completedAt = completedAt;
     }
-    return databases.updateDocument(dbId, tasksCollectionId, taskId, dataToUpdate);
+    return tablesDB.updateRow({
+        databaseId: dbId,
+        tableId: tasksCollectionId,
+        rowId: taskId,
+        data: dataToUpdate,
+    });
 }
 async function updateTaskType(taskId, type) {
-    return databases.updateDocument(dbId, tasksCollectionId, taskId, { type });
+    return tablesDB.updateRow({
+        databaseId: dbId,
+        tableId: tasksCollectionId,
+        rowId: taskId,
+        data: { type },
+    });
 }
 
 async function deleteTask(taskId) {
-    return databases.deleteDocument(dbId, tasksCollectionId, taskId);
+    return tablesDB.deleteRow({
+        databaseId: dbId,
+        tableId: tasksCollectionId,
+        rowId: taskId,
+    });
 }
 
 async function getTaskById(taskId) {
     try {
-        return await databases.getDocument(dbId, tasksCollectionId, taskId);
+        return await tablesDB.getRow({
+            databaseId: dbId,
+            tableId: tasksCollectionId,
+            rowId: taskId,
+        });
     } catch (error) {
         if (error.code === 404) return null;
         throw error;
@@ -289,19 +354,19 @@ async function getTaskById(taskId) {
 
 const createHabit = async (userId, data) => {
     try {
-        const document = await databases.createDocument(
-            dbId,
-            habitCollectionId,
-            ID.unique(),
-            {
+        const document = await tablesDB.createRow({
+            databaseId: dbId,
+            tableId: habitCollectionId,
+            rowId: ID.unique(),
+            data: {
                 habitName: data.habitName,
                 habitLocation: data.habitLocation,
                 habitGoal: data.habitGoal,
                 userId: userId,
                 completedTimes: 0,
-                completedDays: data.completedDays.toString(),
-            }
-        );
+                completedDays: data.completedDays?.toString?.() ?? String(data.completedDays),
+            },
+        });
         console.log(data.completedDays)
         return document;
     } catch (error) {
@@ -310,30 +375,302 @@ const createHabit = async (userId, data) => {
     }
 };
 
+const createBadHabit = async (userId, data) => {
+    try {
+        const auraLoss = severityToAuraLoss(data.severity);
+        if (auraLoss == null) {
+            const err = new Error('Invalid severity');
+            err.code = 400;
+            throw err;
+        }
+
+        if (data.completedDays == null) {
+            const err = new Error('completedDays is required');
+            err.code = 400;
+            throw err;
+        }
+
+        return await tablesDB.createRow({
+    databaseId: dbId,
+    tableId: badHabitsCollectionId,
+    rowId: ID.unique(),
+    data: {            
+                habitName: data.habitName,
+                habitGoal: data.habitGoal,
+                userId: userId,
+                auraLoss,
+                completedTimes: typeof data.completedTimes === 'number' ? data.completedTimes : 0,
+                completedDays: data.completedDays.toString(),
+            }
+    });
+    } catch (error) {
+        console.error('Appwrite createBadHabit error:', error);
+        throw error;
+    }
+};
+
 
 const getHabits = async (userId) => {
-    return databases.listDocuments(dbId, habitCollectionId, [
-        Query.equal('userId', userId)
-    ]); 
+    const rows = await tablesDB.listRows({
+        databaseId: dbId,
+        tableId: habitCollectionId,
+        queries: [Query.equal('userId', userId)],
+    });
+    return normalizeRowListToDocumentList(rows);
+}
+
+const getBadHabits = async (userId) => {
+    const rows = await tablesDB.listRows({
+        databaseId: dbId,
+        tableId: badHabitsCollectionId,
+        queries: [Query.equal('userId', userId)],
+    });
+    return normalizeRowListToDocumentList(rows);
+};
+
+async function updateHabit(userId, habitId, updates) {
+    const habit = await tablesDB.getRow({
+        databaseId: dbId,
+        tableId: habitCollectionId,
+        rowId: habitId,
+    });
+
+    if (!habit) {
+        const err = new Error('Habit not found');
+        err.code = 404;
+        throw err;
+    }
+    if (habit.userId !== userId) {
+        const err = new Error('Unauthorized');
+        err.code = 403;
+        throw err;
+    }
+
+    const data = {};
+    if (Object.prototype.hasOwnProperty.call(updates, 'habitName')) data.habitName = updates.habitName;
+    if (Object.prototype.hasOwnProperty.call(updates, 'habitLocation')) data.habitLocation = updates.habitLocation;
+    if (Object.prototype.hasOwnProperty.call(updates, 'habitGoal')) data.habitGoal = updates.habitGoal;
+    if (Object.prototype.hasOwnProperty.call(updates, 'completedDays')) {
+        data.completedDays = updates.completedDays?.toString?.() ?? String(updates.completedDays);
+    }
+
+    if (Object.keys(data).length === 0) {
+        const err = new Error('No valid fields to update');
+        err.code = 400;
+        throw err;
+    }
+
+    await tablesDB.updateRow({
+        databaseId: dbId,
+        tableId: habitCollectionId,
+        rowId: habitId,
+        data,
+    });
+
+    return tablesDB.getRow({
+        databaseId: dbId,
+        tableId: habitCollectionId,
+        rowId: habitId,
+    });
+}
+
+async function updateBadHabit(userId, badHabitId, updates) {
+    const badHabit = await tablesDB.getRow({
+        databaseId: dbId,
+        tableId: badHabitsCollectionId,
+        rowId: badHabitId,
+    });
+
+    if (!badHabit) {
+        const err = new Error('Bad habit not found');
+        err.code = 404;
+        throw err;
+    }
+    if (badHabit.userId !== userId) {
+        const err = new Error('Unauthorized');
+        err.code = 403;
+        throw err;
+    }
+
+    const data = {};
+    if (Object.prototype.hasOwnProperty.call(updates, 'habitName')) data.habitName = updates.habitName;
+    if (Object.prototype.hasOwnProperty.call(updates, 'habitGoal')) data.habitGoal = updates.habitGoal;
+    if (Object.prototype.hasOwnProperty.call(updates, 'completedDays')) {
+        data.completedDays = updates.completedDays?.toString?.() ?? String(updates.completedDays);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(updates, 'severity')) {
+        const auraLoss = severityToAuraLoss(updates.severity);
+        if (auraLoss == null) {
+            const err = new Error('Invalid severity');
+            err.code = 400;
+            throw err;
+        }
+        data.auraLoss = auraLoss;
+    }
+
+    if (Object.keys(data).length === 0) {
+        const err = new Error('No valid fields to update');
+        err.code = 400;
+        throw err;
+    }
+
+    await tablesDB.updateRow({
+        databaseId: dbId,
+        tableId: badHabitsCollectionId,
+        rowId: badHabitId,
+        data,
+    });
+
+    return tablesDB.getRow({
+        databaseId: dbId,
+        tableId: badHabitsCollectionId,
+        rowId: badHabitId,
+    });
 }
 
 async function completeHabit(userId, habitId, completedDays) {
     console.log(completedDays);
     try {
-    databases.incrementDocumentAttribute(dbId, habitCollectionId, habitId, 'completedTimes', 1);
-   return databases.updateDocument(dbId, habitCollectionId, habitId, {'completedDays': completedDays});
+        const habit = await tablesDB.getRow({
+            databaseId: dbId,
+            tableId: habitCollectionId,
+            rowId: habitId,
+        });
+
+        if (!habit) {
+            const err = new Error('Habit not found');
+            err.code = 404;
+            throw err;
+        }
+        if (habit.userId !== userId) {
+            const err = new Error('Unauthorized');
+            err.code = 403;
+            throw err;
+        }
+
+        await tablesDB.incrementRowColumn({
+            databaseId: dbId,
+            tableId: habitCollectionId,
+            rowId: habitId,
+            column: 'completedTimes',
+            value: 1,
+        });
+
+        const updatedProfile = await tablesDB.incrementRowColumn({
+            databaseId: dbId,
+            tableId: profilesCollectionId,
+            rowId: userId,
+            column: 'aura',
+            value: 15,
+        });
+
+        await tablesDB.updateRow({
+            databaseId: dbId,
+            tableId: habitCollectionId,
+            rowId: habitId,
+            data: { completedDays: completedDays?.toString?.() ?? String(completedDays) },
+        });
+
+        const updatedHabit = await tablesDB.getRow({
+            databaseId: dbId,
+            tableId: habitCollectionId,
+            rowId: habitId,
+        });
+
+        return {
+            ...updatedHabit,
+            aura: updatedProfile?.aura,
+        };
     } catch (error) {
         console.log("boom")
         console.log(error);
         throw error;
     }
 }
+
+async function completeBadHabit(userId, badHabitId, completedDays, incrementBy = 1) {
+    const amount = typeof incrementBy === 'number' && Number.isFinite(incrementBy) ? incrementBy : 1;
+    try {
+        const badHabit = await tablesDB.getRow({
+            databaseId: dbId,
+            tableId: badHabitsCollectionId,
+            rowId: badHabitId,
+        });
+
+        if (!badHabit) {
+            const err = new Error('Bad habit not found');
+            err.code = 404;
+            throw err;
+        }
+        if (badHabit.userId !== userId) {
+            const err = new Error('Unauthorized');
+            err.code = 403;
+            throw err;
+        }
+
+        const auraLossPer = typeof badHabit.auraLoss === 'number' && Number.isFinite(badHabit.auraLoss)
+            ? badHabit.auraLoss
+            : severityToAuraLoss(badHabit.severity);
+
+        if (auraLossPer == null) {
+            const err = new Error('Invalid severity');
+            err.code = 400;
+            throw err;
+        }
+
+        await tablesDB.incrementRowColumn({
+            databaseId: dbId,
+            tableId: badHabitsCollectionId,
+            rowId: badHabitId,
+            column: 'completedTimes',
+            value: amount,
+        });
+
+        const updatedProfile = await tablesDB.decrementRowColumn({
+            databaseId: dbId,
+            tableId: profilesCollectionId,
+            rowId: userId,
+            column: 'aura',
+            value: auraLossPer * amount,
+        });
+
+        await tablesDB.updateRow({
+            databaseId: dbId,
+            tableId: badHabitsCollectionId,
+            rowId: badHabitId,
+            data: {
+                completedDays: completedDays?.toString?.() ?? String(completedDays),
+            },
+        });
+        const updatedBadHabit = await tablesDB.getRow({
+            databaseId: dbId,
+            tableId: badHabitsCollectionId,
+            rowId: badHabitId,
+        });
+        return {
+            ...updatedBadHabit,
+            aura: updatedProfile?.aura,
+        };
+    } catch (error) {
+        console.error('Appwrite completeBadHabit error:', error);
+        throw error;
+    }
+}
 async function deleteHabit(habitId) {
-    tablesDB.deleteRow(
-    dbId,
-    habitCollectionId,
-    habitId
-);
+    return tablesDB.deleteRow({
+        databaseId: dbId,
+        tableId: habitCollectionId,
+        rowId: habitId,
+    });
+}
+
+async function deleteBadHabit(badHabitId) {
+    return tablesDB.deleteRow({
+        databaseId: dbId,
+        tableId: badHabitsCollectionId,
+        rowId: badHabitId,
+    });
 }
 
 module.exports = {
@@ -356,5 +693,11 @@ module.exports = {
     createHabit,
     getHabits,
     completeHabit,
+    updateHabit,
     deleteHabit,
+    createBadHabit,
+    getBadHabits,
+    completeBadHabit,
+    updateBadHabit,
+    deleteBadHabit,
 };

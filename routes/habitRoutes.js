@@ -40,6 +40,24 @@ router.put('/', authMiddleware, async (req, res) => {
     }
 });
 
+router.patch('/', authMiddleware, async (req, res) => {
+    const userId = req.user.$id;
+    try {
+        const { habitId, ...updates } = req.body || {};
+        if (!habitId) {
+            return res.status(400).json({ error: 'habitId is required' });
+        }
+        const updatedHabit = await appwriteService.updateHabit(userId, habitId, updates);
+        res.status(200).json(updatedHabit);
+    } catch (error) {
+        if (error?.code === 400) return res.status(400).json({ error: error.message });
+        if (error?.code === 403) return res.status(403).json({ error: 'Unauthorized' });
+        if (error?.code === 404) return res.status(404).json({ error: 'Habit not found' });
+        console.error('Error editing habit:', error);
+        res.status(500).json({ error: 'Failed to edit habit' });
+    }
+});
+
 router.delete('/', authMiddleware, async (req, res) => {
     const userId = req.user.$id;
     const habitId = req.body.habitId;
