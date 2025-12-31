@@ -10,7 +10,9 @@ const studyPlanRoutes = require('./routes/studyPlanRoutes');
 const userRoutes = require('./routes/userRoutes');
 // const admin = require('firebase-admin');
 const habitRoutes = require('./routes/habitRoutes');
+
 const badHabitRoutes = require('./routes/badHabitRoutes');
+const auraPageRoutes = require('./routes/auraPageRoutes');
 
 dotenv.config();
 
@@ -38,6 +40,7 @@ app.use('/api/social-blocker', socialBlockerRoutes);
 app.use('/api/study-plan', studyPlanRoutes);
 app.use('/api/habit', habitRoutes);
 app.use('/api/bad-habit', badHabitRoutes);
+app.use('/api/aura-page', auraPageRoutes);
 // app.use('/api/notifications', notificationRoutes);
 
 // Global error handler

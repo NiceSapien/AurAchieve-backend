@@ -5,7 +5,7 @@ const GEMINI_PRIMARY_KEY = process.env.GEMINI_API_KEY_PRIMARY;
 const GEMINI_FAILSAFE_KEY = process.env.GEMINI_API_KEY_FAILSAFE;
 
 async function callGeminiAPI(base64Image, taskDescription, apiKey) {
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
 
     const body = {
         contents: [
@@ -66,7 +66,7 @@ const classifyTaskWithGemini = async (taskDescription, taskCategory) => {
     }
     
     const attemptClassification = async (apiKey, keyType) => {
-        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
         const body = { contents: [{ parts: [{ text: prompt }] }] };
 
         try {
@@ -120,7 +120,7 @@ const classifyTaskWithGemini = async (taskDescription, taskCategory) => {
 };
 
 async function makeGeminiRequest(prompt, apiKey) {
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
     const body = { contents: [{ parts: [{ text: prompt }] }] };
 
     const response = await axios.post(endpoint, body, {

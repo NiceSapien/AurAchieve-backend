@@ -1,3 +1,18 @@
+const { profilesCollectionId: _profilesCollectionId, ...restConfig } = require('../config/appwriteClient');
+const auraPagesCollectionId = process.env.AURAPAGE_COLLECTION_ID || 'aurapage';
+async function getAuraPage(userId) {
+    try {
+        const row = await tablesDB.getRow({
+            databaseId: dbId,
+            tableId: auraPagesCollectionId,
+            rowId: userId,
+        });
+        return row;
+    } catch (error) {
+        if (error.code === 404) return null;
+        throw error;
+    }
+}
 const { tablesDB, dbId, profilesCollectionId, tasksCollectionId, studyPlansCollectionId, habitCollectionId, ID, Query } = require('../config/appwriteClient');
 
 const badHabitsCollectionId = process.env.BAD_HABITS_COLLECTION_ID || 'badhabits';
@@ -700,4 +715,5 @@ module.exports = {
     completeBadHabit,
     updateBadHabit,
     deleteBadHabit,
+    getAuraPage,
 };

@@ -4,6 +4,7 @@ const authMiddleware = require('../middleware/authMiddleware');
 const { verifyTaskWithGemini, classifyTaskWithGemini } = require('../services/geminiService'); 
 const appwriteService = require('../services/appwriteService'); 
 const quotes = require('../quotes');
+const { profilesCollectionId } = require('../config/appwriteClient');
 
 
 const DAILY_VALIDATION_LIMIT = 200;
@@ -24,6 +25,7 @@ router.get('/', authMiddleware, async (req, res) => {
         const badHabitsResult = await appwriteService.getBadHabits(userId);
         let plan = await appwriteService.getStudyPlan(userId, clientDate);
         const profile = await appwriteService.getOrCreateUserProfile(userId, userName, userEmail);
+        console.log(profile);
         res.json({
             tasks: tasksResult.documents,
             habits: habitsResult.documents,
@@ -31,11 +33,15 @@ router.get('/', authMiddleware, async (req, res) => {
             studyPlan: plan,
             userId: profile.userId || userId, 
             name: userName,
+            username: profile.username || "",
             email: userEmail,
             aura: profile.aura,
             validationCount: profile.validationCount,
             lastValidationResetDate: profile.lastValidationResetDate,
-            quote: {quote: quotes, author: "NiceSapien"}
+            aura: profile.aura,
+            validationCount: profile.validationCount,
+            lastValidationResetDate: profile.lastValidationResetDate,
+            quote: {quote: quotes, author: "Anonymous"}
         });
     } catch (error) {
         console.error("GET /api/tasks: Error fetching tasks:", error);
