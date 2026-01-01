@@ -3,7 +3,6 @@ const router = express.Router();
 const { Client, Databases } = require('node-appwrite');
 require('dotenv').config();
 
-// Appwrite client setup
 const client = new Client();
 client
     .setEndpoint(process.env.APPWRITE_ENDPOINT)
@@ -18,9 +17,8 @@ const APPWRITE_DATABASE_ID = process.env.APPWRITE_DATABASE_ID;
 
 const authMiddleware = require('../middleware/authMiddleware');
 
-// POST /aura-page
 router.post('/', authMiddleware, async (req, res) => {
-    const { username, enable, theme } = req.body;
+    const { username, enable, theme, bio } = req.body;
     const user = req.user;
     if (!username) {
         return res.status(400).json({ error: 'Username is required' });
@@ -30,6 +28,9 @@ router.post('/', authMiddleware, async (req, res) => {
     }
     if (typeof username !== 'string' || username.length > 40 || /\s/.test(username) || !/^[a-zA-Z0-9._-]+$/.test(username)) {
         return res.status(400).json({ error: 'Invalid username. Max 40 chars, no spaces, only letters, numbers, dot, underscore, hyphen.' });
+    }
+    if (bio && (typeof bio !== 'string' || bio.length > 180)) {
+        return res.status(400).json({ error: 'Bio must be max 180 characters' });
     }
     try {
         const { Query } = require('node-appwrite');
@@ -51,8 +52,6 @@ router.post('/', authMiddleware, async (req, res) => {
         if (typeof enable !== 'boolean') {
             return res.status(400).json({ error: 'Enable must be true or false' });
         }
-        // ...existing code...
-        // Try to update the user's AuraPage and Profile documents
         let auraPageDoc, profileDoc;
         try {
             auraPageDoc = await database.updateDocument(
@@ -68,7 +67,7 @@ router.post('/', authMiddleware, async (req, res) => {
                         APPWRITE_DATABASE_ID,
                         AURAPAGE_COLLECTION_ID,
                         user.$id,
-                        { username, theme: validTheme, enable }
+                        { username, theme: validTheme, enable, purchasedThemes: ['default'], bio }
                     );
                 } catch (createError) {
                     return res.status(500).json({ error: createError.message || 'Failed to create AuraPage' });
@@ -127,6 +126,108 @@ router.patch('/enable', authMiddleware, async (req, res) => {
     }
 });
 
+router.patch('/theme', authMiddleware, async (req, res) => {
+    const user = req.user;
+    const { theme } = req.body;
+    
+    const THEME_PRICES = {
+        'peace': 250,
+        'midnight': 500,
+        'hacker': 750,
+        'gold': 750,
+        'default': 0
+    };
+
+    if (!user || !user.$id) {
+        return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    const allowedThemes = ['hacker', 'peace', 'midnight', 'gold', 'default'];
+    if (!theme || !allowedThemes.includes(theme)) {
+        return res.status(400).json({ error: 'Invalid theme' });
+    }
+
+    try {
+        const auraPageDoc = await database.getDocument(
+            APPWRITE_DATABASE_ID,
+            AURAPAGE_COLLECTION_ID,
+            user.$id
+        );
+
+        const purchasedThemes = auraPageDoc.purchasedThemes || [];
+
+        if (purchasedThemes.includes(theme)) {
+            const updatedDoc = await database.updateDocument(
+                APPWRITE_DATABASE_ID,
+                AURAPAGE_COLLECTION_ID,
+                user.$id,
+                { theme }
+            );
+            return res.status(200).json({ message: 'Theme updated', theme: updatedDoc.theme, purchasedThemes: updatedDoc.purchasedThemes });
+        }
+
+        const profileDoc = await database.getDocument(
+            APPWRITE_DATABASE_ID,
+            process.env.PROFILES_COLLECTION_ID,
+            user.$id
+        );
+
+        const cost = THEME_PRICES[theme];
+
+        if ((profileDoc.aura || 0) < cost) {
+            return res.status(402).json({ error: 'Insufficient Aura' });
+        }
+
+        await database.updateDocument(
+            APPWRITE_DATABASE_ID,
+            process.env.PROFILES_COLLECTION_ID,
+            user.$id,
+            { aura: (profileDoc.aura || 0) - cost }
+        );
+
+        const newPurchasedThemes = [...purchasedThemes, theme];
+        const updatedDoc = await database.updateDocument(
+            APPWRITE_DATABASE_ID,
+            AURAPAGE_COLLECTION_ID,
+            user.$id,
+            {
+                theme,
+                purchasedThemes: newPurchasedThemes
+            }
+        );
+
+        return res.status(200).json({ message: 'Theme purchased and updated', theme: updatedDoc.theme, purchasedThemes: updatedDoc.purchasedThemes });
+
+    } catch (error) {
+        return res.status(500).json({ error: error.message || 'Failed to update theme' });
+    }
+});
+
+router.patch('/bio', authMiddleware, async (req, res) => {
+    const user = req.user;
+    const { bio } = req.body;
+
+    if (!user || !user.$id) {
+        return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    if (typeof bio !== 'string' || bio.length > 180) {
+        return res.status(400).json({ error: 'Bio must be a string and max 160 characters' });
+    }
+
+    try {
+        const response = await database.updateDocument(
+            APPWRITE_DATABASE_ID,
+            AURAPAGE_COLLECTION_ID,
+            user.$id,
+            { bio }
+        );
+        return res.status(200).json({ message: 'Bio updated', bio: response.bio });
+    } catch (error) {
+        return res.status(500).json({ error: error.message || 'Failed to update bio' });
+    }
+});
+
 router.get('/', authMiddleware, async (req, res) => {
     const user = req.user;
     if (!user || !user.$id) {
@@ -141,7 +242,9 @@ router.get('/', authMiddleware, async (req, res) => {
         return res.status(200).json({
             username: doc.username,
             enable: doc.enable,
-            theme: doc.theme
+            theme: doc.theme,
+            purchasedThemes: doc.purchasedThemes || [],
+            bio: doc.bio || ''
         });
     } catch (error) {
         return res.status(404).json({ error: 'AuraPage not found' });
