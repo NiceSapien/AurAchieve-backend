@@ -18,7 +18,7 @@ const APPWRITE_DATABASE_ID = process.env.APPWRITE_DATABASE_ID;
 const authMiddleware = require('../middleware/authMiddleware');
 
 router.post('/', authMiddleware, async (req, res) => {
-    const { username, enable, theme, bio } = req.body;
+    const { username, enable, theme, bio, e2e } = req.body;
     const user = req.user;
     if (!username) {
         return res.status(400).json({ error: 'Username is required' });
@@ -31,6 +31,9 @@ router.post('/', authMiddleware, async (req, res) => {
     }
     if (bio && (typeof bio !== 'string' || bio.length > 180)) {
         return res.status(400).json({ error: 'Bio must be max 180 characters' });
+    }
+    if (e2e !== undefined && typeof e2e !== 'boolean') {
+        return res.status(400).json({ error: 'e2e must be a boolean' });
     }
     try {
         const { Query } = require('node-appwrite');
@@ -77,20 +80,22 @@ router.post('/', authMiddleware, async (req, res) => {
             }
         }
         try {
+            const profilePayload = e2e === undefined ? { username } : { username, e2e };
             profileDoc = await database.updateDocument(
                 APPWRITE_DATABASE_ID,
                 process.env.PROFILES_COLLECTION_ID,
                 user.$id,
-                { username }
+                profilePayload
             );
         } catch (error) {
             if (error.code === 404) {
                 try {
+                    const profilePayload = e2e === undefined ? { username } : { username, e2e };
                     profileDoc = await database.createDocument(
                         APPWRITE_DATABASE_ID,
                         process.env.PROFILES_COLLECTION_ID,
                         user.$id,
-                        { username }
+                        profilePayload
                     );
                 } catch (createError) {
                     return res.status(500).json({ error: createError.message || 'Failed to create profile' });

@@ -101,7 +101,7 @@ router.delete('/giveup', authMiddleware, async (req, res) => {
             await appwriteService.increaseUserAura(userId, auraToAdd);
         }
 
-        // Reset social blocker same as /end behavior
+        
         await appwriteService.resetSocialBlocker(userId);
 
         res.json({

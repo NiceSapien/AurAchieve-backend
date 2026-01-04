@@ -13,6 +13,7 @@ const habitRoutes = require('./routes/habitRoutes');
 
 const badHabitRoutes = require('./routes/badHabitRoutes');
 const auraPageRoutes = require('./routes/auraPageRoutes');
+const memoryLanesRoutes = require('./routes/memoryLanesRoutes');
 
 dotenv.config();
 
@@ -41,6 +42,7 @@ app.use('/api/study-plan', studyPlanRoutes);
 app.use('/api/habit', habitRoutes);
 app.use('/api/bad-habit', badHabitRoutes);
 app.use('/api/aura-page', auraPageRoutes);
+app.use('/api/memory-lanes', memoryLanesRoutes);
 // app.use('/api/notifications', notificationRoutes);
 
 // Global error handler

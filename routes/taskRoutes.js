@@ -34,6 +34,7 @@ router.get('/', authMiddleware, async (req, res) => {
             userId: profile.userId || userId, 
             name: userName,
             username: profile.username || "",
+            e2e: profile.e2e !== undefined ? profile.e2e : false,
             email: userEmail,
             aura: profile.aura,
             validationCount: profile.validationCount,
