@@ -1,5 +1,11 @@
 const { Client, Users, ID, Query, TablesDB } = require('node-appwrite');
+const https = require('https');
 require('dotenv').config();
+
+if (process.env.NODE_ENV === 'production') {
+    const agent = new https.Agent({ keepAlive: true });
+    https.globalAgent = agent;
+}
 
 const client = new Client();
 

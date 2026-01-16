@@ -1,6 +1,7 @@
 // Welcome to the main file. Simply run node server.js and you'll be good to go. Also, make sure to edit .env.example before running!
 
 const express = require('express');
+const compression = require('compression');
 const dotenv = require('dotenv');
 const taskRoutes = require('./routes/taskRoutes');
 const socialBlockerRoutes = require('./routes/socialblockRoutes');
@@ -27,12 +28,16 @@ const PORT = process.env.PORT || 4000;
 });*/
 
 // Middleware
+app.use(compression());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Basic Route
 app.get('/', (req, res) => {
-    res.send('feel alive.');
+    res.json({
+         appwriteEndpoint: process.env.APPWRITE_ENDPOINT, 
+         appwriteProjectId: process.env.APPWRITE_PROJECT_ID 
+    });
 });
 // API Routes
 app.use('/api/user', userRoutes)

@@ -6,55 +6,238 @@ info:
 servers:
   - url: https://auraascend-fgf4aqf5gubgacb3.centralindia-01.azurewebsites.net
 paths:
+  # --- User Profile ---
   /api/user/profile:
     get:
-      summary: Get user profile
-      security:
-        - bearerAuth: []
+      summary: Get User Profile
+      description: Retrieve the authenticated user's profile details.
+      tags: [User]
       responses:
         '200':
-          description: Profile fetched successfully.
+          description: Profile retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+
+  # --- Tasks ---
+  /api/tasks:
+    get:
+      summary: Get Dashboard Data
+      description: |
+        Retrieves a comprehensive snapshot of the user's dashboard, including:
+        - Active tasks
+        - Habits
+        - Bad habits
+        - Study plan for the day
+        - User profile details
+      tags: [Tasks]
+      parameters:
+        - in: query
+          name: clientDate
+          schema:
+            type: string
+            format: date
+          description: The client's current date (YYYY-MM-DD).
+      responses:
+        '200':
+          description: Dashboard data retrieved successfully.
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  userId:
-                    type: string
-                  name:
-                    type: string
-                  email:
+                  tasks:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Task'
+                  habits:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Habit'
+                  badHabits:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/BadHabit'
+                  studyPlan:
+                    $ref: '#/components/schemas/StudyPlan'
+                  userId: 
                     type: string
                   aura:
                     type: integer
-                  validationCount:
-                    type: integer
-                  lastValidationResetDate:
-                    type: string
-        '500':
-          description: Error fetching user profile
-  /api/tasks:
-    get:
-      summary: Get all tasks for user
-      security:
-        - bearerAuth: []
+    
+    post:
+      summary: Create Task
+      description: Create a new task. The task will be analyzed by AI to determine intensity and type.
+      tags: [Tasks]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, taskCategory]
+              properties:
+                name:
+                  type: string
+                taskCategory:
+                  type: string
+                  enum: [normal, timed]
+                durationMinutes:
+                  type: integer
+                  description: Required if taskCategory is 'timed'.
+      responses:
+        '201':
+          description: Task created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+
+  /api/tasks/{taskId}:
+    delete:
+      summary: Delete Task
+      tags: [Tasks]
+      parameters:
+        - in: path
+          name: taskId
+          schema:
+            type: string
+          required: true
+      responses:
+        '200': 
+          description: Task deleted.
+
+  /api/tasks/{taskId}/complete-normal-non-verifiable:
+    post:
+      summary: Complete Normal Non-Verifiable Task
+      tags: [Tasks]
+      parameters:
+        - in: path
+          name: taskId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                verificationType: 
+                  type: string
+                  example: honor
       responses:
         '200':
-          description: Successfully fetched all the tasks
+          description: Task completed.
+
+  /api/tasks/{taskId}/complete:
+    post:
+      summary: Complete Image Verifiable Task
+      tags: [Tasks]
+      parameters:
+        - in: path
+          name: taskId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                verificationType:
+                  type: string
+                  enum: [image]
+                imageBase64:
+                  type: string
+                  description: Base64 encoded image string.
+      responses:
+        '200':
+          description: Task verified and completed.
+
+  /api/tasks/{taskId}/complete-bad:
+    post:
+      summary: Complete Bad Type Task
+      tags: [Tasks]
+      parameters:
+        - in: path
+          name: taskId
+          required: true
+          schema: 
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                verificationType:
+                  type: string
+                  example: bad_task_completion
+      responses:
+        '200':
+          description: Task completed.
+  
+  /api/tasks/{taskId}/complete-timed:
+    post:
+      summary: Complete Timed Task
+      tags: [Tasks]
+      parameters:
+        - in: path
+          name: taskId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                verificationType:
+                  type: string
+                  example: timed_completion
+                durationSpentMinutes:
+                  type: integer
+      responses:
+        '200':
+          description: Task completed.
+
+  /api/tasks/{taskId}/mark-bad:
+    put:
+      summary: Mark Task as Bad
+      description: Manually re-classify a task as 'bad' type.
+      tags: [Tasks]
+      parameters:
+        - in: path
+          name: taskId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Task updated.
+
+  # --- Habits ---
+  /api/habit:
+    get:
+      summary: Get Habits
+      tags: [Habits]
+      responses:
+        '200':
+          description: List of habits
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Task'
-        '500':
-          description: Failed to fetch tasks
+                  $ref: '#/components/schemas/Habit'
     post:
-      summary: Create a new task
-      description: |
-        Creates a new user task. Intensity, type, and isImageVerifiable are determined by the backend.
-      security:
-        - bearerAuth: []
+      summary: Create Habit
+      tags: [Habits]
       requestBody:
         required: true
         content:
@@ -62,360 +245,251 @@ paths:
             schema:
               type: object
               properties:
-                name:
+                habitName:
                   type: string
-                  example: "Read Chapter 1"
-                taskCategory:
+                habitGoal:
                   type: string
-                  enum: [normal, timed]
-                  example: "timed"
-                durationMinutes:
-                  type: integer
-                  example: 45
-              required:
-                - name
-                - taskCategory
-      responses:
-        '201':
-          description: Task created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Task'
-        '400':
-          description: Validation error
-        '500':
-          description: Internal error
-
-  /api/tasks/{taskId}/complete:
-    post:
-      summary: Complete a normal image-verifiable task
-      description: Marks a normal image-verifiable task as completed (requires image).
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: taskId
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                imageBase64:
+                habitLocation:
                   type: string
-                  description: Base64-encoded image for verification.
-                  example: "/9j/4AAQSkZJRgABAQAAAQABAAD..."
-              required:
-                - imageBase64
-      responses:
-        '200':
-          description: Task completed
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TaskCompletionResponse'
-        '400':
-          description: Validation error
-        '404':
-          description: Task not found
-        '500':
-          description: Internal error
-
-  /api/tasks/{taskId}/complete-normal-non-verifiable:
-    post:
-      summary: Complete a normal non-image-verifiable task
-      description: Marks a normal non-image-verifiable task as completed (honor system).
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: taskId
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Task completed
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TaskCompletionResponse'
-        '400':
-          description: Validation error
-        '404':
-          description: Task not found
-        '500':
-          description: Internal error
-
-  /api/tasks/{taskId}/complete-timed:
-    post:
-      summary: Complete a timed task
-      description: Marks a timed task as completed.
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: taskId
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                actualDurationSpentMinutes:
-                  type: integer
-                  description: Actual minutes spent on the task (optional).
-                  example: 42
-      responses:
-        '200':
-          description: Timed task completed
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TaskCompletionResponse'
-        '400':
-          description: Validation error
-        '404':
-          description: Task not found
-        '500':
-          description: Internal error
-
-  /api/tasks/{taskId}/complete-bad:
-    post:
-      summary: Complete a bad task
-      description: Marks a bad task as completed (user admits to doing a bad habit).
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: taskId
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Bad task completed successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TaskCompletionResponse'
-        '400':
-          description: Validation error
-        '404':
-          description: Task not found
-        '500':
-          description: Internal error
-
-  /api/tasks/{taskId}/mark-bad:
-    put:
-      summary: Mark a task as bad
-      description: Marks a good task as bad (user admits to failing a good habit).
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: taskId
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Task marked as bad
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Task'
-        '400':
-          description: Validation error
-        '404':
-          description: Task not found
-        '500':
-          description: Internal error
-
-  /api/tasks/{taskId}:
-    delete:
-      summary: Delete a task
-      description: Deletes a task by its ID.
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: taskId
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Task deleted
-        '404':
-          description: Task not found
-        '500':
-          description: Internal error
-  /api/social-blocker:
-    post:
-      summary: Setup social blocker
-      description: Sets up the social media blocker with the given password, start and end time.
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                socialPassword:
-                  type: string
-                socialEnd:
-                  type: string
-      responses:
-        '200':
-          description: Social blocker setup
-        '400':
-          description: Validation error
-        '500':
-          description: Internal error
-  /api/social-blocker/get:
-    get:
-      summary: Get social blocker info
-      description: Get the details about how much the user has progressed through the social media blocker.
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Social blocker info
-        '404':
-          description: Not found
-        '500':
-          description: Internal error
-  /api/social-blocker/end:
-    post:
-      summary: End social blocker
-      description: When the timeout is over, this endpoint is called to end the social media blocker.
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Social blocker ended
-        '500':
-          description: Internal error
-  /api/study-plan/generate:
-    post:
-      summary: Generate Study Plan
-      description: This feature is known as "Study Plan" in the app. Internally, it is named timetable.
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                chapters:
-                  type: object
-                  example:
-                    Mathematics:
-                      - number: "1"
-                        chapterName: "Algebra"
-                      - number: "2"
-                        chapterName: "Calculus"
-                    Physics:
-                      - number: "1"
-                        chapterName: "Kinematics"
-                      - number: "2"
-                        chapterName: "Dynamics"
-                deadline:
-                  type: string
-                  format: date-time
-                  example: "2025-12-31"
-                clientDate:
-                  type: string
-                  format: date-time
-                  example: "2025-12-13"
-      responses:
-        '200':
-          description: Timetable generated
-        '400':
-          description: Validation error
-        '500':
-          description: Internal error
-  /api/study-plan:
-    post:
-      summary: Save study plan
-      description: If the user is fine with the study plan preview, this endpoint saves it.
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                subjects:
-                  type: object
-                chapters:
-                  type: object
-                deadline:
-                  type: string
-                timetable:
+                completedDays:
                   type: array
                   items:
-                    type: object
+                     type: string
       responses:
         '201':
-          description: Study plan saved
-        '400':
-          description: Validation error
-        '500':
-          description: Internal error
-    get:
-      summary: Get study plan
-      description: Gets the study plan whenever needed.
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: clientDate
-          in: query
-          required: true
-          schema:
-            type: string
+          description: Habit created.
+    put:
+      summary: Increment Habit Completion
+      tags: [Habits]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                habitId:
+                  type: string
+                completedDays:
+                  type: array
+                  items:
+                     type: string
+                incrementCompletedTimes:
+                  type: integer
+      responses:
+        '201':
+          description: Habit updated.
+    patch:
+      summary: Edit Habit
+      tags: [Habits]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+               type: object
+               properties:
+                 habitId:
+                   type: string
+                 habitName:
+                   type: string
+                 habitLocation:
+                   type: string
+                 habitGoal:
+                   type: string
+                 completedDays:
+                   type: array
+                   items: 
+                     type: string
       responses:
         '200':
-          description: Study plan
-        '404':
-          description: Not found
-        '500':
-          description: Internal error
+          description: Habit updated.
     delete:
-      summary: Delete study plan
-      description: Permanently deletes the study plan of the user so they can setup a new one.
-      security:
-        - bearerAuth: []
+      summary: Delete Habit
+      tags: [Habits]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                habitId:
+                  type: string
       responses:
         '204':
-          description: Study plan deleted
-        '500':
-          description: Internal error
+          description: Habit deleted.
+
+  # --- Bad Habits ---
+  /api/bad-habit:
+    get:
+      summary: Get Bad Habits
+      tags: [Bad Habits]
+      responses:
+        '200':
+          description: List of bad habits
+          content:
+             application/json:
+               schema:
+                 type: array
+                 items:
+                   $ref: '#/components/schemas/BadHabit'
+    post:
+      summary: Create Bad Habit
+      tags: [Bad Habits]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                habitName:
+                  type: string
+                habitGoal:
+                  type: string
+                severity:
+                  type: string
+                  enum: [average, high, vhigh, extreme]
+                completedDays:
+                  type: array
+                  items: 
+                    type: string
+      responses:
+        '201': 
+           description: Bad habit created.
+    put:
+      summary: Increment Bad Habit
+      tags: [Bad Habits]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                habitId:
+                  type: string
+                incrementBy: 
+                  type: integer
+                completedDays:
+                  type: array
+                  items: 
+                    type: string
+      responses:
+        '200':
+           description: Bad habit incremented and aura deducted.
+    patch:
+      summary: Edit Bad Habit
+      tags: [Bad Habits]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                habitId:
+                  type: string
+                habitName:
+                  type: string
+                habitGoal:
+                  type: string
+                severity:
+                  type: string
+                completedDays:
+                   type: array
+                   items: 
+                     type: string
+      responses:
+         '200':
+           description: Bad habit updated.
+    delete:
+      summary: Delete Bad Habit
+      tags: [Bad Habits]
+      requestBody:
+        required: true
+        content:
+          application/json:
+             schema:
+               type: object
+               properties:
+                 habitId:
+                   type: string
+      responses:
+        '204':
+           description: Bad habit deleted.
+
+  # --- Study Plan ---
+  /api/study-plan:
+    get:
+      summary: Get Study Plan
+      tags: [Study Plan]
+      parameters:
+        - in: query
+          name: clientDate
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Study plan retrieved.
+        '404':
+          description: No study plan found.
+    post:
+      summary: Save Study Plan
+      tags: [Study Plan]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StudyPlan'
+      responses:
+        '201':
+          description: Study plan saved.
+    delete:
+      summary: Delete Study Plan
+      tags: [Study Plan]
+      responses:
+        '204':
+           description: Study plan deleted.
+
+  /api/study-plan/generate:
+    post:
+      summary: Generate Timetable Preview
+      description: Generates a potential timetable based on subjects and deadlines using AI.
+      tags: [Study Plan]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                chapters:
+                  type: object
+                  additionalProperties: 
+                    type: array
+                    items:
+                      type: object
+                deadline:
+                  type: string
+                  format: date
+                clientDate:
+                  type: string
+                  format: date
+      responses:
+        '200':
+           description: Generated timetable.
+
   /api/study-plan/tasks/{taskId}/complete:
     post:
-      summary: Complete a study plan task
-      description: Marks a task from the study plan as complete and gives aura for it.
-      security:
-        - bearerAuth: []
+      summary: Complete Study Plan Task
+      tags: [Study Plan]
       parameters:
-        - name: taskId
-          in: path
+        - in: path
+          name: taskId
           required: true
           schema:
             type: string
@@ -428,17 +502,244 @@ paths:
               properties:
                 clientDate:
                   type: string
+                  format: date
                 dateOfTask:
                   type: string
+                  format: date
       responses:
         '200':
-          description: Study plan task completed
-        '400':
-          description: Validation error
+          description: Task completed.
+
+  # --- Social Blocker ---
+  /api/social-blocker/get:
+    get:
+      summary: Get Social Blocker Status
+      tags: [Social Blocker]
+      responses:
+        '200':
+           description: Current blocker configuration.
+           content:
+             application/json:
+               schema:
+                 $ref: '#/components/schemas/SocialBlocker'
         '404':
-          description: Not found
-        '500':
-          description: Internal error
+           description: No active blocker.
+
+  /api/social-blocker:
+    post:
+      summary: Setup Social Blocker
+      tags: [Social Blocker]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+               type: object
+               properties:
+                 socialEnd:
+                   type: integer
+                   description: Duration in days.
+                 socialPassword:
+                   type: string
+      responses:
+        '200': 
+           description: Blocker configured.
+
+  /api/social-blocker/end:
+    post:
+      summary: Complete Social Blocker
+      description: Verifies completion of the social blocker period and rewards Aura.
+      tags: [Social Blocker]
+      requestBody:
+        content:
+           application/json:
+             schema:
+               type: object
+               properties:
+                 hasEnded:
+                   type: boolean
+                 userId:
+                   type: string
+                 email:
+                   type: string
+      responses:
+         '200':
+            description: Blocker ended successfully.
+
+  /api/social-blocker/giveup:
+    delete:
+      summary: Give Up Social Blocker
+      description: Ends the blocker prematurely. May give partial rewards.
+      tags: [Social Blocker]
+      responses:
+         '200':
+            description: Blocker ended.
+
+  # --- Aura Page ---
+  /api/aura-page:
+    get:
+      summary: Get Aura Page
+      tags: [Aura Page]
+      responses:
+        '200':
+          description: Aura Page details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuraPage'
+    post:
+      summary: Claim Aura Page
+      tags: [Aura Page]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                theme:
+                  type: string
+                enable:
+                  type: boolean
+                e2e: 
+                   type: boolean
+      responses:
+        '200':
+           description: Aura Page claimed for user.
+
+  /api/aura-page/theme:
+    patch:
+      summary: Update Aura Page Theme
+      tags: [Aura Page]
+      requestBody:
+        required: true
+        content:
+          application/json:
+             schema:
+               type: object
+               properties:
+                 theme:
+                   type: string
+      responses:
+        '200':
+           description: Theme updated.
+
+  /api/aura-page/enable:
+    patch:
+      summary: Enable/Disable Aura Page
+      tags: [Aura Page]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                enable:
+                  type: boolean
+      responses:
+        '200':
+           description: Updated status.
+
+  /api/aura-page/bio:
+    patch:
+      summary: Update Aura Page Bio
+      tags: [Aura Page]
+      requestBody:
+        content:
+          application/json:
+            schema:
+               type: object
+               properties:
+                 bio:
+                   type: string
+      responses:
+        '200':
+           description: Bio updated.
+
+  # --- Memory Lanes ---
+  /api/memory-lanes/setup:
+    post:
+      summary: Setup Memory Lanes
+      tags: [Memory Lanes]
+      requestBody:
+        content:
+          application/json:
+             schema:
+               type: object
+               properties:
+                 e2e:
+                   type: boolean
+      responses:
+        '200':
+           description: Memory Lanes configured.
+
+  /api/memory-lanes:
+    get:
+      summary: Get Memories
+      tags: [Memory Lanes]
+      parameters:
+        - in: query
+          name: length
+          schema:
+            type: integer
+      responses:
+        '200':
+           description: List of memories.
+           content:
+             application/json:
+               schema:
+                 type: array
+                 items:
+                   $ref: '#/components/schemas/MemoryLane'
+    post:
+      summary: Create Memory
+      tags: [Memory Lanes]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: 
+                   type: string
+                description:
+                   type: string
+                public:
+                   type: boolean
+                files:
+                   type: array
+                   items:
+                     type: string
+                tag: 
+                   type: string
+                tagColor:
+                   type: string
+                mood:
+                   type: string
+                createdAt:
+                   type: string
+                   format: date-time
+      responses:
+        '201': 
+           description: Memory created.
+
+  /api/memory-lanes/{memoryId}:
+    delete:
+      summary: Delete Memory
+      tags: [Memory Lanes]
+      parameters:
+        - in: path
+          name: memoryId
+          required: true
+          schema:
+             type: string
+      responses:
+        '200':
+           description: Memory deleted.
+
 components:
   securitySchemes:
     bearerAuth:
@@ -447,60 +748,227 @@ components:
       bearerFormat: JWT
 
   schemas:
+    # --- Shared Schemas ---
+    UserProfile:
+      type: object
+      properties:
+        userId:
+          type: string
+          description: Unique identifier for the user.
+        name:
+          type: string
+          description: User's display name.
+        email:
+          type: string
+          format: email
+          description: User's email address.
+        aura:
+          type: integer
+          description: Current Aura points balance.
+        validationCount:
+          type: integer
+          description: Number of validations performed today.
+        lastValidationResetDate:
+          type: string
+          format: date
+          description: Date when validation count was last reset.
+        username:
+          type: string
+          description: Unique username for Aura Pages.
+        e2e:
+          type: boolean
+          description: Whether End-to-End encryption is enabled for Memory Lanes.
+        quote:
+          type: object
+          properties:
+            quote:
+              type: string
+            author:
+              type: string
+    
     Task:
       type: object
       properties:
         $id:
           type: string
-          description: Unique task ID
-          example: "65f2e3b8c2a1b"
+          description: Task ID.
         name:
           type: string
-          example: "Read Chapter 1"
+          description: Name of the task.
         intensity:
           type: string
-          enum: [easy, medium, hard]
-          example: "easy"
+          enum: [easy, medium, hard, extreme]
+          description: AI-determined intensity level.
         type:
           type: string
-          enum: [good, bad]
-          example: "good"
+          enum: [good, bad, neutral]
+          description: AI-determined type of the task.
         taskCategory:
           type: string
           enum: [normal, timed]
-          example: "timed"
+          description: User-selected category.
         durationMinutes:
           type: integer
           nullable: true
-          example: 45
+          description: Duration for timed tasks.
         isImageVerifiable:
           type: boolean
-          example: false
+          description: Whether the task can be verified by image analysis.
         status:
           type: string
           enum: [pending, completed]
-          example: "pending"
-        userId:
-          type: string
-          example: "user_abc123"
+          description: Current status of the task.
         createdAt:
           type: string
           format: date-time
-          example: "2025-08-11T12:00:00Z"
-        completedAt:
-          type: string
-          format: date-time
-          nullable: true
-          example: "2025-08-12T14:30:00Z"
-
-    TaskCompletionResponse:
+    
+    Habit:
       type: object
       properties:
-        message:
+        $id:
           type: string
-          example: "Task completed successfully."
-        auraChange:
+          description: Habit ID.
+        habitName:
+          type: string
+        habitGoal:
+          type: string
+        habitLocation:
+          type: string
+        completedTimes:
           type: integer
-          example: 30
-        completedTask:
-          $ref: '#/components/schemas/Task'
+        completedDays:
+          type: array
+          items:
+            type: string
+          description: List of date strings when the habit was completed.
+    
+    BadHabit:
+      type: object
+      properties:
+        $id:
+          type: string
+          description: Bad Habit ID.
+        habitName:
+          type: string
+        habitGoal:
+          type: string
+        severity:
+          type: string
+          enum: [average, high, vhigh, extreme]
+        auraLoss:
+          type: integer
+          description: Amount of Aura lost per occurrence.
+        completedTimes:
+          type: integer
+        completedDays:
+          type: array
+          items:
+            type: string
+    
+    StudyPlan:
+      type: object
+      properties:
+        subjects:
+          type: array
+          items:
+            type: object
+            description: Subject details
+        timetable:
+          type: array
+          items:
+            $ref: '#/components/schemas/StudyPlanDay'
+        deadline:
+          type: string
+          format: date
+        lastCheckedDate:
+          type: string
+          format: date
+
+    StudyPlanDay:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        day:
+          type: string
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/StudyPlanTask'
+
+    StudyPlanTask:
+      type: object
+      properties:
+        id:
+          type: string
+        topic:
+          type: string
+        subject:
+          type: string
+        chapter:
+          type: string
+        completed:
+          type: boolean
+        duration:
+          type: integer
+          description: Duration in minutes
+
+    SocialBlocker:
+      type: object
+      properties:
+        socialPassword:
+          type: string
+          description: Password set to unlock the social blocker prematurely.
+        socialEnd:
+          type: string
+          format: date
+          description: Date when the social blocker ends.
+        socialStart:
+          type: string
+          format: date
+          description: Date when the social blocker started.
+        socialDays:
+          type: integer
+          description: Total duration in days.
+
+    AuraPage:
+      type: object
+      properties:
+        username:
+          type: string
+        theme:
+          type: string
+        enable:
+          type: boolean
+        bio:
+          type: string
+        purchasedThemes:
+          type: array
+          items:
+            type: string
+
+    MemoryLane:
+      type: object
+      properties:
+        $id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        public:
+          type: boolean
+        files:
+          type: array
+          items:
+            type: string
+        tag:
+          type: string
+        tagColor:
+          type: string
+        mood:
+          type: string
+        isEncrypted:
+          type: boolean
+

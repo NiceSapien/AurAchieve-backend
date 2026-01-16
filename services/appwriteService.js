@@ -216,16 +216,21 @@ const getStudyPlan = async (userId, clientDate) => {
             }
         }
 
+        const updates = [];
+
         if (auraToDeduct > 0) {
-            const userProfile = await getOrCreateUserProfile(userId);
-            const newAura = (userProfile.aura || 0) - auraToDeduct;
-            await updateUserAura(userId, newAura);
+            updates.push(getOrCreateUserProfile(userId).then(userProfile => {
+                const newAura = (userProfile.aura || 0) - auraToDeduct;
+                return updateUserAura(userId, newAura);
+            }));
         }
 
         if (plan.lastCheckedDate !== clientDate) {
-            await updateStudyPlan(plan.$id, { lastCheckedDate: clientDate });
+            updates.push(updateStudyPlan(plan.$id, { lastCheckedDate: clientDate }));
             plan.lastCheckedDate = clientDate;
         }
+
+        if (updates.length > 0) await Promise.all(updates);
         return plan;
     } catch (error) {
         if (error.code === 404) {
@@ -285,7 +290,7 @@ const getOrSetupSocialBlocker = async (userId, socialPassword, socialEnd) => {
             const day = String(today.getDate()).padStart(2, '0');
 
             const formattedDate = `${year}-${month}-${day}`;
-            console.log(formattedDate);
+            
             function addDaysToDate(dateString, days) {
                 const date = new Date(dateString);
                 date.setDate(date.getDate() + days);
@@ -302,7 +307,6 @@ const getOrSetupSocialBlocker = async (userId, socialPassword, socialEnd) => {
                     socialStart: formattedDate,
                 },
             });
-            console.log("boom")
             return newBlocker;
         } catch (creationError) {
             console.error('Appwrite create new user social blocker error:', creationError);
@@ -564,33 +568,28 @@ async function completeHabit(userId, habitId, completedDays) {
             throw err;
         }
 
-        await tablesDB.incrementRowColumn({
-            databaseId: dbId,
-            tableId: habitCollectionId,
-            rowId: habitId,
-            column: 'completedTimes',
-            value: 1,
-        });
+        const [_, updatedProfile] = await Promise.all([
+            tablesDB.incrementRowColumn({
+                databaseId: dbId,
+                tableId: habitCollectionId,
+                rowId: habitId,
+                column: 'completedTimes',
+                value: 1,
+            }),
+            tablesDB.incrementRowColumn({
+                databaseId: dbId,
+                tableId: profilesCollectionId,
+                rowId: userId,
+                column: 'aura',
+                value: 15,
+            })
+        ]);
 
-        const updatedProfile = await tablesDB.incrementRowColumn({
-            databaseId: dbId,
-            tableId: profilesCollectionId,
-            rowId: userId,
-            column: 'aura',
-            value: 15,
-        });
-
-        await tablesDB.updateRow({
+        const updatedHabit = await tablesDB.updateRow({
             databaseId: dbId,
             tableId: habitCollectionId,
             rowId: habitId,
             data: { completedDays: completedDays?.toString?.() ?? String(completedDays) },
-        });
-
-        const updatedHabit = await tablesDB.getRow({
-            databaseId: dbId,
-            tableId: habitCollectionId,
-            rowId: habitId,
         });
 
         return {
@@ -598,8 +597,7 @@ async function completeHabit(userId, habitId, completedDays) {
             aura: updatedProfile?.aura,
         };
     } catch (error) {
-        console.log("boom")
-        console.log(error);
+        console.error('Appwrite completeHabit error:', error);
         throw error;
     }
 }
@@ -634,34 +632,30 @@ async function completeBadHabit(userId, badHabitId, completedDays, incrementBy =
             throw err;
         }
 
-        await tablesDB.incrementRowColumn({
-            databaseId: dbId,
-            tableId: badHabitsCollectionId,
-            rowId: badHabitId,
-            column: 'completedTimes',
-            value: amount,
-        });
+        const [_, updatedProfile] = await Promise.all([
+            tablesDB.incrementRowColumn({
+                databaseId: dbId,
+                tableId: badHabitsCollectionId,
+                rowId: badHabitId,
+                column: 'completedTimes',
+                value: amount,
+            }),
+            tablesDB.decrementRowColumn({
+                databaseId: dbId,
+                tableId: profilesCollectionId,
+                rowId: userId,
+                column: 'aura',
+                value: auraLossPer * amount,
+            })
+        ]);
 
-        const updatedProfile = await tablesDB.decrementRowColumn({
-            databaseId: dbId,
-            tableId: profilesCollectionId,
-            rowId: userId,
-            column: 'aura',
-            value: auraLossPer * amount,
-        });
-
-        await tablesDB.updateRow({
+        const updatedBadHabit = await tablesDB.updateRow({
             databaseId: dbId,
             tableId: badHabitsCollectionId,
             rowId: badHabitId,
             data: {
                 completedDays: completedDays?.toString?.() ?? String(completedDays),
             },
-        });
-        const updatedBadHabit = await tablesDB.getRow({
-            databaseId: dbId,
-            tableId: badHabitsCollectionId,
-            rowId: badHabitId,
         });
         return {
             ...updatedBadHabit,
