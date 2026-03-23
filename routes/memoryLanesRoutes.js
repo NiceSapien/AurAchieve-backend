@@ -144,8 +144,8 @@ router.post('/', authMiddleware, async (req, res) => {
     if (typeof isPublic !== 'boolean') {
         return res.status(400).json({ error: 'Public must be a boolean' });
     }
-    if (description && typeof description === 'string' && description.length > 3000) {
-        return res.status(400).json({ error: 'Description must be at most 3000 characters' });
+    if (description && typeof description === 'string' && description.length > 30000) {
+        return res.status(400).json({ error: 'Description must be at most 30000 characters' });
     }
     if (tag && !tagColor) {
         return res.status(400).json({ error: 'tagColor is required when tag is provided' });
