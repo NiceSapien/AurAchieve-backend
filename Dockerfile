@@ -27,7 +27,7 @@ ENV NODE_ENV=production
 # copy production dependencies and source code into final image
 FROM base AS release
 COPY --from=install /temp/prod/node_modules node_modules
-COPY --from=prerelease /usr/src/app/index.ts .
+COPY --from=prerelease /usr/src/app/server.js .
 COPY --from=prerelease /usr/src/app/package.json .
 
 # run the app
