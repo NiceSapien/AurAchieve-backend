@@ -14,7 +14,7 @@ COPY . .
 
 # 5. Set permissions (Hugging Face runs as user 1000)
 RUN chown -R 1000:1000 /app
-USER 1000
+USER node
 
 # 6. Expose the port HF expects
 EXPOSE 7860
