@@ -1,36 +1,23 @@
-# use the official Bun image
-# see all versions at https://hub.docker.com/r/oven/bun/tags
-FROM oven/bun:1 AS base
-WORKDIR /usr/src/app
+# 1. Use Node LTS
+FROM node:24-slim
 
-# install dependencies into temp directory
-# this will cache them and speed up future builds
-FROM base AS install
-RUN mkdir -p /temp/dev
-COPY package.json bun.lock /temp/dev/
-RUN cd /temp/dev && bun install --frozen-lockfile
+# 2. Create app directory
+WORKDIR /app
 
-# install with --production (exclude devDependencies)
-RUN mkdir -p /temp/prod
-COPY package.json bun.lock /temp/prod/
-RUN cd /temp/prod && bun install --frozen-lockfile --production
+# 3. Install dependencies
+# Copy package files first for better caching
+COPY package*.json ./
+RUN npm install
 
-# copy node_modules from temp directory
-# then copy all (non-ignored) project files into the image
-FROM base AS prerelease
-COPY --from=install /temp/dev/node_modules node_modules
+# 4. Copy the rest of your code
 COPY . .
 
-# [optional] tests & build
-ENV NODE_ENV=production
+# 5. Set permissions (Hugging Face runs as user 1000)
+RUN chown -R 1000:1000 /app
+USER 1000
 
-# copy production dependencies and source code into final image
-FROM base AS release
-COPY --from=install /temp/prod/node_modules node_modules
-COPY --from=prerelease /usr/src/app/server.js .
-COPY --from=prerelease /usr/src/app/package.json .
-
-# run the app
-USER bun
+# 6. Expose the port HF expects
 EXPOSE 7860
-ENTRYPOINT [ "bun", "run", "server.js" ]
+
+# 7. Start the app
+CMD ["node", "server.js"]
