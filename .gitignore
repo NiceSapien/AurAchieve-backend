@@ -141,3 +141,4 @@ privateConfig/
 
 
 doc/deploy.sh
+envpush.py
