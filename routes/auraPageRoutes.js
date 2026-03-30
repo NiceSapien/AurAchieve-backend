@@ -47,7 +47,7 @@ router.post('/', authMiddleware, async (req, res) => {
         }
         let validTheme = null;
         if (typeof theme === 'string') {
-            const allowedThemes = ['hacker', 'peace', 'midnight', 'gold'];
+            const allowedThemes = ['hacker', 'peace', 'midnight', 'gold', 'galactic'];
             if (allowedThemes.includes(theme)) {
                 validTheme = theme;
             }
@@ -137,9 +137,10 @@ router.patch('/theme', authMiddleware, async (req, res) => {
     
     const THEME_PRICES = {
         'peace': 250,
-        'midnight': 500,
-        'hacker': 750,
-        'gold': 750,
+        'midnight': 350,
+        'hacker': 300,
+        'gold': 250,
+        'galactic': 600,
         'default': 0
     };
 
@@ -147,7 +148,7 @@ router.patch('/theme', authMiddleware, async (req, res) => {
         return res.status(401).json({ error: 'User not authenticated' });
     }
 
-    const allowedThemes = ['hacker', 'peace', 'midnight', 'gold', 'default'];
+    const allowedThemes = ['hacker', 'peace', 'midnight', 'gold', 'galactic', 'default'];
     if (!theme || !allowedThemes.includes(theme)) {
         return res.status(400).json({ error: 'Invalid theme' });
     }

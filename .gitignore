@@ -144,3 +144,4 @@ doc/deploy.sh
 envpush.py
 docs/.vitepress/dist
 docs/.vitepress/cache
+my-api-docs/

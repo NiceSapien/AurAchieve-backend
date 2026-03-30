@@ -84,14 +84,6 @@ const setUserE2ePreference = async (userId, e2e) => {
         throw error;
     }
 };
-const getMonthRangeUtc = (year, month) => {
-    const start = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0, 0));
-    const end = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999));
-    return {
-        startIso: start.toISOString(),
-        endIso: end.toISOString(),
-    };
-};
 router.post('/setup', authMiddleware, async (req, res) => {
     if (!ensureMemoryLanesConfigured(res)) return;
     const user = req.user;
@@ -166,9 +158,6 @@ router.post('/', authMiddleware, async (req, res) => {
     try {
         const e2e = await getUserE2ePreference(userId);
         if (!e2e && !ensureEncryptionConfigured(res)) return;
-        const encryptedFiles = !e2e && Array.isArray(files)
-            ? files.map((f) => encryptText(f))
-            : files;
         const documentData = {
             name: e2e ? name : encryptText(name),
             description: e2e ? description : encryptText(description),
@@ -177,7 +166,7 @@ router.post('/', authMiddleware, async (req, res) => {
             tagColor: e2e ? tagColor : encryptText(tagColor),
             public: isPublic,
             mood: e2e ? mood : encryptText(mood),
-            files: encryptedFiles
+            files
         };
         const response = await database.createDocument(
             MEMORYLANES_DATABASE_ID,
@@ -260,7 +249,7 @@ router.put('/:memoryId', authMiddleware, async (req, res) => {
         if (hasPublic) updateData.public = isPublic;
         if (hasMood) updateData.mood = e2e ? mood : encryptText(mood);
         if (hasFiles) {
-            updateData.files = e2e ? files : files.map((f) => encryptText(f));
+            updateData.files = files;
         }
         const response = await database.updateDocument(
             MEMORYLANES_DATABASE_ID,
@@ -298,11 +287,15 @@ router.delete('/:memoryId', authMiddleware, async (req, res) => {
             }
             throw error;
         }
-        const e2e = await getUserE2ePreference(userId);
-        let filesToDelete = Array.isArray(memoryDoc.files) ? memoryDoc.files : [];
-        if (!e2e && filesToDelete.length > 0) {
-            filesToDelete = filesToDelete.map(f => decryptText(f));
-        }
+        let rawFiles = Array.isArray(memoryDoc.files) ? memoryDoc.files : [];
+        const filesToDelete = rawFiles.map((f) => {
+            try {
+                const decrypted = decryptText(f);
+                return decrypted || f;
+            } catch (_) {
+                return f;
+            }
+        });
         const bucketId = MEMORYLANES_STORAGE_BUCKET_ID;
         const deletedFiles = [];
         const failedFiles = [];
@@ -333,82 +326,35 @@ router.get('/', authMiddleware, async (req, res) => {
         return res.status(401).json({ error: 'User not authenticated' });
     }
     const userId = user.$id;
+    const pageRaw = req.query.page;
+    const pageSizeRaw = req.query.pageSize;
     const lengthRaw = req.query.length;
     const offsetRaw = req.query.offset;
-    const hasLength = lengthRaw !== undefined;
-    const length = hasLength ? Math.min(Math.max(parseInt(lengthRaw, 10) || 20, 1), 100) : null;
-    const offset = Math.max(parseInt(offsetRaw, 10) || 0, 0);
+    const hasPageMode = pageRaw !== undefined || pageSizeRaw !== undefined;
+    const resolvedLength = Math.min(
+        Math.max(
+            parseInt(pageSizeRaw, 10) || parseInt(lengthRaw, 10) || 30,
+            1
+        ),
+        100
+    );
+    const resolvedPage = Math.max(parseInt(pageRaw, 10) || 1, 1);
+    const length = resolvedLength;
+    const offset = hasPageMode
+        ? (resolvedPage - 1) * resolvedLength
+        : Math.max(parseInt(offsetRaw, 10) || 0, 0);
     try {
         const e2e = await getUserE2ePreference(userId);
         if (!e2e && !ensureEncryptionConfigured(res)) return;
-        if (hasLength) {
-            const now = new Date();
-            const currentMonth = now.getUTCMonth() + 1;
-            const currentYear = now.getUTCFullYear();
-            const previousMonthStart = new Date(Date.UTC(currentYear, currentMonth - 2, 1, 0, 0, 0, 0));
-            const cutoffIso = previousMonthStart.toISOString();
-            const response = await database.listDocuments(
-                MEMORYLANES_DATABASE_ID,
-                userId,
-                [
-                    Query.lessThan('$createdAt', cutoffIso),
-                    Query.limit(length),
-                    Query.offset(offset),
-                    Query.orderDesc('$createdAt'),
-                ]
-            );
-            if (e2e) {
-                return res.status(200).json(response);
-            }
-            const decryptedDocuments = (response.documents || []).map((doc) => {
-                const cloned = { ...doc };
-                try {
-                    cloned.name = decryptText(cloned.name);
-                    cloned.description = decryptText(cloned.description);
-                    cloned.tag = decryptText(cloned.tag);
-                    cloned.tagColor = decryptText(cloned.tagColor);
-                    cloned.mood = decryptText(cloned.mood);
-                    if (Array.isArray(cloned.files)) {
-                        cloned.files = cloned.files.map((f) => decryptText(f));
-                    }
-                } catch (_) {
-                }
-                return cloned;
-            });
-            return res.status(200).json({
-                ...response,
-                documents: decryptedDocuments,
-            });
-        }
-        const now = new Date();
-        const currentMonth = now.getUTCMonth() + 1;
-        const currentYear = now.getUTCFullYear();
-        const prev = new Date(Date.UTC(currentYear, currentMonth - 2, 1));
-        const prevMonth = prev.getUTCMonth() + 1;
-        const prevYear = prev.getUTCFullYear();
-        const rangesToFetch = [
-            getMonthRangeUtc(currentYear, currentMonth),
-            getMonthRangeUtc(prevYear, prevMonth),
-        ];
-        const listOneRange = async ({ startIso, endIso }) => {
-            return database.listDocuments(
-                MEMORYLANES_DATABASE_ID,
-                userId,
-                [
-                    Query.between('$createdAt', startIso, endIso),
-                    Query.orderDesc('$createdAt'),
-                    Query.limit(200),
-                ]
-            );
-        };
-        const responses = [];
-        for (const range of rangesToFetch) {
-            responses.push(await listOneRange(range));
-        }
-        const mergedDocuments = responses
-            .flatMap(r => r.documents || [])
-            .sort((a, b) => String(b.$createdAt).localeCompare(String(a.$createdAt)));
-        const response = { total: mergedDocuments.length, documents: mergedDocuments };
+        const response = await database.listDocuments(
+            MEMORYLANES_DATABASE_ID,
+            userId,
+            [
+                Query.orderDesc('$createdAt'),
+                Query.limit(length),
+                Query.offset(offset),
+            ]
+        );
         if (e2e) {
             return res.status(200).json(response);
         }
@@ -421,7 +367,14 @@ router.get('/', authMiddleware, async (req, res) => {
                 cloned.tagColor = decryptText(cloned.tagColor);
                 cloned.mood = decryptText(cloned.mood);
                 if (Array.isArray(cloned.files)) {
-                    cloned.files = cloned.files.map((f) => decryptText(f));
+                    cloned.files = cloned.files.map((f) => {
+                        try {
+                            const decrypted = decryptText(f);
+                            return decrypted || f;
+                        } catch (_) {
+                            return f;
+                        }
+                    });
                 }
             } catch (_) {
             }
