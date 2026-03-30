@@ -191,6 +191,92 @@ router.post('/', authMiddleware, async (req, res) => {
         res.status(500).json({ error: error.message || 'Failed to create memory' });
     }
 });
+router.put('/:memoryId', authMiddleware, async (req, res) => {
+    if (!ensureMemoryLanesConfigured(res)) return;
+    const user = req.user;
+    if (!user || !user.$id) {
+        return res.status(401).json({ error: 'User not authenticated' });
+    }
+    const userId = user.$id;
+    const { memoryId } = req.params;
+    if (!memoryId) {
+        return res.status(400).json({ error: 'memoryId is required' });
+    }
+    const hasName = Object.prototype.hasOwnProperty.call(req.body, 'name');
+    const hasDescription = Object.prototype.hasOwnProperty.call(req.body, 'description');
+    const hasCreatedAt = Object.prototype.hasOwnProperty.call(req.body, 'createdAt');
+    const hasTag = Object.prototype.hasOwnProperty.call(req.body, 'tag');
+    const hasTagColor = Object.prototype.hasOwnProperty.call(req.body, 'tagColor');
+    const hasPublic = Object.prototype.hasOwnProperty.call(req.body, 'public');
+    const hasMood = Object.prototype.hasOwnProperty.call(req.body, 'mood');
+    const hasFiles = Object.prototype.hasOwnProperty.call(req.body, 'files');
+    const hasUpdatableField = hasName || hasDescription || hasCreatedAt || hasTag || hasTagColor || hasPublic || hasMood || hasFiles;
+    if (!hasUpdatableField) {
+        return res.status(400).json({ error: 'At least one updatable field is required' });
+    }
+    const { name, description, createdAt, tag, tagColor, public: isPublic, mood, files } = req.body;
+    if (hasName && (typeof name !== 'string' || name.trim() === '')) {
+        return res.status(400).json({ error: 'Name must be a non-empty string' });
+    }
+    if (hasDescription) {
+        if (description !== null && typeof description !== 'string') {
+            return res.status(400).json({ error: 'Description must be a string or null' });
+        }
+        if (typeof description === 'string' && description.length > 30000) {
+            return res.status(400).json({ error: 'Description must be at most 30000 characters' });
+        }
+    }
+    if (hasCreatedAt && (typeof createdAt !== 'string' || createdAt.trim() === '')) {
+        return res.status(400).json({ error: 'createdAt must be a non-empty string' });
+    }
+    if (hasTag && tag && !hasTagColor) {
+        return res.status(400).json({ error: 'tagColor is required when tag is provided' });
+    }
+    if (hasPublic && typeof isPublic !== 'boolean') {
+        return res.status(400).json({ error: 'Public must be a boolean' });
+    }
+    if (hasMood && mood !== null) {
+        if (typeof mood !== 'string' || mood.trim() === '') {
+            return res.status(400).json({ error: 'Mood must be a non-empty string or null' });
+        }
+    }
+    if (hasFiles) {
+        if (!Array.isArray(files)) {
+            return res.status(400).json({ error: 'files must be an array of filenames' });
+        }
+        if (!files.every(f => typeof f === 'string' && f.length > 0 && f.length <= 255)) {
+            return res.status(400).json({ error: 'files must be an array of non-empty strings (max 255 chars each)' });
+        }
+    }
+    try {
+        const e2e = await getUserE2ePreference(userId);
+        if (!e2e && !ensureEncryptionConfigured(res)) return;
+        const updateData = {};
+        if (hasName) updateData.name = e2e ? name : encryptText(name);
+        if (hasDescription) updateData.description = e2e ? description : encryptText(description);
+        if (hasCreatedAt) updateData.createdAt = createdAt;
+        if (hasTag) updateData.tag = e2e ? tag : encryptText(tag);
+        if (hasTagColor) updateData.tagColor = e2e ? tagColor : encryptText(tagColor);
+        if (hasPublic) updateData.public = isPublic;
+        if (hasMood) updateData.mood = e2e ? mood : encryptText(mood);
+        if (hasFiles) {
+            updateData.files = e2e ? files : files.map((f) => encryptText(f));
+        }
+        const response = await database.updateDocument(
+            MEMORYLANES_DATABASE_ID,
+            userId,
+            memoryId,
+            updateData
+        );
+        return res.status(200).json({ message: 'Memory updated', document: response });
+    } catch (error) {
+        if (error.code === 404) {
+            return res.status(404).json({ error: 'Memory not found' });
+        }
+        console.error('Update memory error:', error);
+        return res.status(500).json({ error: error.message || 'Failed to update memory' });
+    }
+});
 router.delete('/:memoryId', authMiddleware, async (req, res) => {
     if (!ensureMemoryLanesConfigured(res)) return;
     const user = req.user;

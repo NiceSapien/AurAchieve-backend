@@ -4,7 +4,8 @@ info:
   description: The official documentation for AurAchieve's backend API, which powers the AurAchieve mobile app.
   version: 1.0.0
 servers:
-  - url: https://auraascend-fgf4aqf5gubgacb3.centralindia-01.azurewebsites.net
+  - url: https://api.aurachieve.com
+    description: Production server
 paths:
   # --- User Profile ---
   /api/user/profile:
