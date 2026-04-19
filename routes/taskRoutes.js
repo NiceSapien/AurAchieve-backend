@@ -39,10 +39,7 @@ router.get('/', authMiddleware, async (req, res) => {
             aura: profile.aura,
             validationCount: profile.validationCount,
             lastValidationResetDate: profile.lastValidationResetDate,
-            aura: profile.aura,
-            validationCount: profile.validationCount,
-            lastValidationResetDate: profile.lastValidationResetDate,
-            quote: {quote: quotes, author: "Anonymous"}
+            quote: quotes
         });
     } catch (error) {
         console.error("GET /api/tasks: Error fetching tasks:", error);

@@ -84,6 +84,22 @@ const setUserE2ePreference = async (userId, e2e) => {
         throw error;
     }
 };
+const findMissingFiles = async (bucketId, fileIds) => {
+    const checks = await Promise.all(
+        fileIds.map(async (fileId) => {
+            try {
+                await storage.getFile(bucketId, fileId);
+                return null;
+            } catch (error) {
+                if (error && error.code === 404) {
+                    return fileId;
+                }
+                throw error;
+            }
+        })
+    );
+    return checks.filter(Boolean);
+};
 router.post('/setup', authMiddleware, async (req, res) => {
     if (!ensureMemoryLanesConfigured(res)) return;
     const user = req.user;
@@ -158,6 +174,18 @@ router.post('/', authMiddleware, async (req, res) => {
     try {
         const e2e = await getUserE2ePreference(userId);
         if (!e2e && !ensureEncryptionConfigured(res)) return;
+        if (Array.isArray(files) && files.length > 0) {
+            if (!MEMORYLANES_STORAGE_BUCKET_ID) {
+                return res.status(500).json({ error: 'MEMORYLANES_STORAGE_BUCKET_ID is not configured' });
+            }
+            const missingFileIds = await findMissingFiles(MEMORYLANES_STORAGE_BUCKET_ID, files);
+            if (missingFileIds.length > 0) {
+                return res.status(400).json({
+                    error: 'Some files do not exist in storage',
+                    missingFileIds,
+                });
+            }
+        }
         const documentData = {
             name: e2e ? name : encryptText(name),
             description: e2e ? description : encryptText(description),
