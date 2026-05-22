@@ -22,7 +22,7 @@ const authMiddleware = async (req, res, next) => {
 
         const user = await account.get(); 
 
-        if (process.env.REQUIRE_EMAIL_VERIFICATION === 'true' && !user.emailVerification) {
+        if (process.env.REQUIRE_EMAIL_VERIFICATION && !user.emailVerification) {
             return res.status(403).json({
                 status: 'error',
                 message: 'Forbidden: Email not verified. Please verify your email to access this resource.',
