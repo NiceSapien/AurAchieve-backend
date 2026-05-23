@@ -12,7 +12,7 @@ pinned: false
 # AurAchieve-backend
 
 > [!IMPORTANT]
-> You're currently in the backend repository of AurAchieve, written in ExpressJS. To view the flutter frontend, please visit [this](https://github.com/NiceSapien/AurAchieve) repository instead.
+> You're currently in an experimental branch of the backend repository of AurAchieve, written in HonoJS. To view the flutter frontend, please visit [this](https://github.com/NiceSapien/AurAchieve) repository instead.
 
 
 **Fix your damn life.**
@@ -23,7 +23,7 @@ Get it now through [GitHub releases](https://github.com/NiceSapien/AurAchieve/re
 
 ## Self-hosting
 > [!WARNING]
-> These instructions are outdated. They are not being updated regularly as the app is in a early development stage and has breaking changes often.
+> These instructions are completely outdated. This is an experimental branch. This branch is written in Hono and built to run on Fastly compute. The below instructions are NOT updated, and for the main expressjs branch.
 You'll need NodeJS v22. You may be able to use other versions but this backend was built and tested on `v22.17.0`. There are no "minimum" requirements for the backend, but it should be fine on just 256MB RAM as its quite lightweight.
 
 1. Clone the repository locally

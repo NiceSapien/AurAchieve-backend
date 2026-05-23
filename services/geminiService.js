@@ -1,9 +1,6 @@
-const axios = require('axios');
-require('dotenv').config();
-
-const GEMINI_PRIMARY_KEY = process.env.GEMINI_API_KEY_PRIMARY;
-const GEMINI_FAILSAFE_KEY = process.env.GEMINI_API_KEY_FAILSAFE;
-
+const { secretValue } = require('../config/runtimeEnv');
+const axios = require('../lib/axios-shim');
+require('../lib/dotenv-shim').config();
 async function callGeminiAPI(base64Image, taskDescription, apiKey) {
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
 
@@ -41,6 +38,9 @@ async function callGeminiAPI(base64Image, taskDescription, apiKey) {
 }
 
 const verifyTaskWithGemini = async (base64Image, taskDescription) => {
+    const GEMINI_PRIMARY_KEY = await secretValue('GEMINI_API_KEY_PRIMARY');
+    const GEMINI_FAILSAFE_KEY = await secretValue('GEMINI_API_KEY_FAILSAFE');
+
     try {
         return await callGeminiAPI(base64Image, taskDescription, GEMINI_PRIMARY_KEY);
     } catch (primaryError) {
@@ -55,8 +55,8 @@ const verifyTaskWithGemini = async (base64Image, taskDescription) => {
 };
 
 const classifyTaskWithGemini = async (taskDescription, taskCategory) => {
-    const primaryKey = process.env.GEMINI_API_KEY_PRIMARY;
-    const failsafeKey = process.env.GEMINI_API_KEY_FAILSAFE;
+    const primaryKey = await secretValue('GEMINI_API_KEY_PRIMARY');
+    const failsafeKey = await secretValue('GEMINI_API_KEY_FAILSAFE');
 
     let prompt;
     if (taskCategory === 'timed') {
@@ -141,6 +141,9 @@ async function makeGeminiRequest(prompt, apiKey) {
 }
 
 async function requestTimetableGen(timetablePayload) {
+    const GEMINI_PRIMARY_KEY = await secretValue('GEMINI_API_KEY_PRIMARY');
+    const GEMINI_FAILSAFE_KEY = await secretValue('GEMINI_API_KEY_FAILSAFE');
+
     const prompt = `Do not respond with anything other than the requested kind of json. Don't add subjects not in the json below. Generate a timetable with the json given below. Basically, you have to alot one day for each chapter until the deadline. Make sure to add revision and break days if there's enough time. Mix different subjects each day so the user doesn't get bored studying the same subject for several days. A break day's json is: {"date": "2025-07-06", "tasks": [{"type": "break", "content": {}}]}. A study day's json is: {"date": "2025-07-08", "tasks": [{"type": "study", "content": {"subject": "SUBJECT NAME", "chapterNumber": "2", "chapterName": "OPTIONAL CHAPTER NAME"}}]}. For revision days, use "revision" as the type and the rest remains same. You can put multiple revision tasks on the same day. Pay attention to the start date and deadline (YYYY-MM-DD format). The deadline is the last day for tasks. Here's the list of chapters, make the timetable according to this: ${JSON.stringify(timetablePayload)}`;
 
     try {

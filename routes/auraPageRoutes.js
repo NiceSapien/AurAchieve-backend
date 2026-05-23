@@ -1,24 +1,34 @@
-const express = require('express');
-const router = express.Router();
-const { Client, Databases } = require('node-appwrite');
-require('dotenv').config();
+const { expressToHono } = require('../lib/honoExpressCompat');
+const router = expressToHono();
+const { Client, Databases, ID, Query } = require('../lib/node-appwrite-shim');
+require('../lib/dotenv-shim').config();
+const { configValue, secretValue } = require('../config/runtimeEnv');
 
-const client = new Client();
-client
-    .setEndpoint(process.env.APPWRITE_ENDPOINT)
-    .setProject(process.env.APPWRITE_PROJECT_ID)
-    .setKey(process.env.APPWRITE_API_KEY);
-
-
-const database = new Databases(client);
-const AURAPAGE_COLLECTION_ID = process.env.AURAPAGE_COLLECTION_ID;
-const APPWRITE_DATABASE_ID = process.env.APPWRITE_DATABASE_ID;
-
+const getDb = async () => {
+    const client = new Client();
+    const [endpoint, project, key] = await Promise.all([
+        configValue('APPWRITE_ENDPOINT'),
+        configValue('APPWRITE_PROJECT_ID'),
+        secretValue('APPWRITE_API_KEY')
+    ]);
+    client
+        .setEndpoint(endpoint)
+        .setProject(project)
+        .setKey(key);
+    return new Databases(client);
+};
 
 const authMiddleware = require('../middleware/authMiddleware');
 
 router.post('/', authMiddleware, async (req, res) => {
     const { username, enable, theme, bio, e2e } = req.body;
+    const AURAPAGE_COLLECTION_ID = configValue('AURAPAGE_COLLECTION_ID');
+    const PROFILES_COLLECTION_ID = configValue('PROFILES_COLLECTION_ID');
+    
+    if (!AURAPAGE_COLLECTION_ID || !PROFILES_COLLECTION_ID) {
+        return res.status(500).json({ error: 'System configuration missing (Collection IDs)' });
+    }
+
     const user = req.user;
     if (!username) {
         return res.status(400).json({ error: 'Username is required' });
@@ -36,7 +46,10 @@ router.post('/', authMiddleware, async (req, res) => {
         return res.status(400).json({ error: 'e2e must be a boolean' });
     }
     try {
-        const { Query } = require('node-appwrite');
+        const database = await getDb();
+        const APPWRITE_DATABASE_ID = configValue('APPWRITE_DATABASE_ID');
+
+        const { Query } = require('../lib/node-appwrite-shim');
         const existing = await database.listDocuments(
             APPWRITE_DATABASE_ID,
             AURAPAGE_COLLECTION_ID,
@@ -83,7 +96,7 @@ router.post('/', authMiddleware, async (req, res) => {
             const profilePayload = e2e === undefined ? { username } : { username, e2e };
             profileDoc = await database.updateDocument(
                 APPWRITE_DATABASE_ID,
-                process.env.PROFILES_COLLECTION_ID,
+                PROFILES_COLLECTION_ID,
                 user.$id,
                 profilePayload
             );
@@ -93,7 +106,7 @@ router.post('/', authMiddleware, async (req, res) => {
                     const profilePayload = e2e === undefined ? { username } : { username, e2e };
                     profileDoc = await database.createDocument(
                         APPWRITE_DATABASE_ID,
-                        process.env.PROFILES_COLLECTION_ID,
+                        PROFILES_COLLECTION_ID,
                         user.$id,
                         profilePayload
                     );
@@ -112,6 +125,8 @@ router.post('/', authMiddleware, async (req, res) => {
 router.patch('/enable', authMiddleware, async (req, res) => {
     const user = req.user;
     const { enable } = req.body;
+    const AURAPAGE_COLLECTION_ID = configValue('AURAPAGE_COLLECTION_ID');
+
     if (!user || !user.$id) {
         return res.status(401).json({ error: 'User not authenticated' });
     }
@@ -119,6 +134,9 @@ router.patch('/enable', authMiddleware, async (req, res) => {
         return res.status(400).json({ error: 'Enable must be true or false' });
     }
     try {
+        const database = await getDb();
+        const APPWRITE_DATABASE_ID = configValue('APPWRITE_DATABASE_ID');
+
         const response = await database.updateDocument(
             APPWRITE_DATABASE_ID,
             AURAPAGE_COLLECTION_ID,
@@ -134,6 +152,8 @@ router.patch('/enable', authMiddleware, async (req, res) => {
 router.patch('/theme', authMiddleware, async (req, res) => {
     const user = req.user;
     const { theme } = req.body;
+    const AURAPAGE_COLLECTION_ID = configValue('AURAPAGE_COLLECTION_ID');
+    const PROFILES_COLLECTION_ID = configValue('PROFILES_COLLECTION_ID');
     
     const THEME_PRICES = {
         'peace': 250,
@@ -154,6 +174,9 @@ router.patch('/theme', authMiddleware, async (req, res) => {
     }
 
     try {
+        const database = await getDb();
+        const APPWRITE_DATABASE_ID = configValue('APPWRITE_DATABASE_ID');
+
         const auraPageDoc = await database.getDocument(
             APPWRITE_DATABASE_ID,
             AURAPAGE_COLLECTION_ID,
@@ -174,7 +197,7 @@ router.patch('/theme', authMiddleware, async (req, res) => {
 
         const profileDoc = await database.getDocument(
             APPWRITE_DATABASE_ID,
-            process.env.PROFILES_COLLECTION_ID,
+            PROFILES_COLLECTION_ID,
             user.$id
         );
 
@@ -186,7 +209,7 @@ router.patch('/theme', authMiddleware, async (req, res) => {
 
         await database.updateDocument(
             APPWRITE_DATABASE_ID,
-            process.env.PROFILES_COLLECTION_ID,
+            PROFILES_COLLECTION_ID,
             user.$id,
             { aura: (profileDoc.aura || 0) - cost }
         );
@@ -212,6 +235,7 @@ router.patch('/theme', authMiddleware, async (req, res) => {
 router.patch('/bio', authMiddleware, async (req, res) => {
     const user = req.user;
     const { bio } = req.body;
+    const AURAPAGE_COLLECTION_ID = configValue('AURAPAGE_COLLECTION_ID');
 
     if (!user || !user.$id) {
         return res.status(401).json({ error: 'User not authenticated' });
@@ -222,6 +246,9 @@ router.patch('/bio', authMiddleware, async (req, res) => {
     }
 
     try {
+        const database = await getDb();
+        const APPWRITE_DATABASE_ID = configValue('APPWRITE_DATABASE_ID');
+
         const response = await database.updateDocument(
             APPWRITE_DATABASE_ID,
             AURAPAGE_COLLECTION_ID,
@@ -236,10 +263,15 @@ router.patch('/bio', authMiddleware, async (req, res) => {
 
 router.get('/', authMiddleware, async (req, res) => {
     const user = req.user;
+    const AURAPAGE_COLLECTION_ID = configValue('AURAPAGE_COLLECTION_ID');
+
     if (!user || !user.$id) {
         return res.status(401).json({ error: 'User not authenticated' });
     }
     try {
+        const database = await getDb();
+        const APPWRITE_DATABASE_ID = configValue('APPWRITE_DATABASE_ID');
+
         const doc = await database.getDocument(
             APPWRITE_DATABASE_ID,
             AURAPAGE_COLLECTION_ID,

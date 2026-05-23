@@ -1,24 +1,7 @@
 // Welcome to the main file. Simply run node server.js and you'll be good to go. Also, make sure to edit .env.example before running!
 
-const express = require('express');
-const compression = require('compression');
-const dotenv = require('dotenv');
-const taskRoutes = require('./routes/taskRoutes');
-const socialBlockerRoutes = require('./routes/socialblockRoutes');
-//const notificationRoutes = require('./routes/notifyRoutes');
-//const timetableRoutes = require('./routes/timetableRoutes');
-const studyPlanRoutes = require('./routes/studyPlanRoutes');
-const userRoutes = require('./routes/userRoutes');
-// const admin = require('firebase-admin');
-const habitRoutes = require('./routes/habitRoutes');
-
-const badHabitRoutes = require('./routes/badHabitRoutes');
-const auraPageRoutes = require('./routes/auraPageRoutes');
-const memoryLanesRoutes = require('./routes/memoryLanesRoutes');
-
-dotenv.config();
-
-const app = express();
+// const express = require('express');
+// const app = express();
 const PORT = process.env.PORT || 4000;
 
 // const serviceAccount = require(process.env.SERVICEACCOUNT);

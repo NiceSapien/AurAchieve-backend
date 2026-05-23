@@ -1,0 +1,14 @@
+manifest_version = 3
+name = "aurachieve-backend"
+description = "Hono Backend for AurAchieve"
+language = "javascript"
+service_id = "8bxk0ptf0ikrYfovv5f6nT"
+
+[scripts]
+build = "npm run build"
+
+[local_server.secret_stores]
+aurachieve = { file = './env.json', format = 'json' }
+
+[local_server.config_stores]
+aurachieve_config = { file = './env.json', format = 'json' }

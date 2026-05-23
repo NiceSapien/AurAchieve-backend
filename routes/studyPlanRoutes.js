@@ -1,5 +1,5 @@
-const express = require('express');
-const router = express.Router();
+const { expressToHono } = require('../lib/honoExpressCompat');
+const router = expressToHono();
 const authMiddleware = require('../middleware/authMiddleware');
 const appwriteService = require('../services/appwriteService');
 const { requestTimetableGen } = require('../services/geminiService');

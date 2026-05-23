@@ -1,0 +1,106 @@
+---
+description: Should be loaded when the user asks something related to hono/V8 isolates.
+# applyTo: 'Describe when these instructions should be loaded by the agent based on task context' # when provided, instructions will automatically be added to the request context when the pattern matches an attached file
+---
+
+<!-- Tip: Use /create-instructions in chat to generate content with agent assistance -->
+
+# Hono
+
+> Hono - means flameðŸ”¥ in Japanese - is a small, simple, and ultrafast web framework built on Web Standards. It works on any JavaScript runtime: Cloudflare Workers, Fastly Compute, Deno, Bun, Vercel, Netlify, AWS Lambda, Lambda@Edge, and Node.js.
+
+## Docs
+
+- [Full Docs](https://hono.dev/llms-full.txt) Full documentation of Hono. (without examples)
+- [Tiny Docs](https://hono.dev/llms-small.txt): Tiny documentation of Hono. (includes only desciption of core)
+
+## Examples
+
+- [Examples](https://github.com/honojs/website/tree/main/examples): List of example files.
+
+## Optional
+
+- [Index](https://hono.dev/docs/index)
+- [Jwt](https://hono.dev/docs/helpers/jwt)
+- [Cookie](https://hono.dev/docs/helpers/cookie)
+- [Html](https://hono.dev/docs/helpers/html)
+- [Route](https://hono.dev/docs/helpers/route)
+- [Factory](https://hono.dev/docs/helpers/factory)
+- [Testing](https://hono.dev/docs/helpers/testing)
+- [Streaming](https://hono.dev/docs/helpers/streaming)
+- [Conninfo](https://hono.dev/docs/helpers/conninfo)
+- [Dev](https://hono.dev/docs/helpers/dev)
+- [Accepts](https://hono.dev/docs/helpers/accepts)
+- [Proxy](https://hono.dev/docs/helpers/proxy)
+- [Ssg](https://hono.dev/docs/helpers/ssg)
+- [Adapter](https://hono.dev/docs/helpers/adapter)
+- [Websocket](https://hono.dev/docs/helpers/websocket)
+- [Css](https://hono.dev/docs/helpers/css)
+- [Context](https://hono.dev/docs/api/context)
+- [Request](https://hono.dev/docs/api/request)
+- [Hono](https://hono.dev/docs/api/hono)
+- [Routing](https://hono.dev/docs/api/routing)
+- [Exception](https://hono.dev/docs/api/exception)
+- [Presets](https://hono.dev/docs/api/presets)
+- [Index](https://hono.dev/docs/api/index)
+- [Routers](https://hono.dev/docs/concepts/routers)
+- [Benchmarks](https://hono.dev/docs/concepts/benchmarks)
+- [Stacks](https://hono.dev/docs/concepts/stacks)
+- [Motivation](https://hono.dev/docs/concepts/motivation)
+- [Web Standard](https://hono.dev/docs/concepts/web-standard)
+- [Developer Experience](https://hono.dev/docs/concepts/developer-experience)
+- [Middleware](https://hono.dev/docs/concepts/middleware)
+- [Third Party](https://hono.dev/docs/middleware/third-party)
+- [Jwt](https://hono.dev/docs/middleware/builtin/jwt)
+- [Ip Restriction](https://hono.dev/docs/middleware/builtin/ip-restriction)
+- [Logger](https://hono.dev/docs/middleware/builtin/logger)
+- [Body Limit](https://hono.dev/docs/middleware/builtin/body-limit)
+- [Trailing Slash](https://hono.dev/docs/middleware/builtin/trailing-slash)
+- [Bearer Auth](https://hono.dev/docs/middleware/builtin/bearer-auth)
+- [Csrf](https://hono.dev/docs/middleware/builtin/csrf)
+- [Combine](https://hono.dev/docs/middleware/builtin/combine)
+- [Jsx Renderer](https://hono.dev/docs/middleware/builtin/jsx-renderer)
+- [Jwk](https://hono.dev/docs/middleware/builtin/jwk)
+- [Pretty Json](https://hono.dev/docs/middleware/builtin/pretty-json)
+- [Timing](https://hono.dev/docs/middleware/builtin/timing)
+- [Language](https://hono.dev/docs/middleware/builtin/language)
+- [Etag](https://hono.dev/docs/middleware/builtin/etag)
+- [Request Id](https://hono.dev/docs/middleware/builtin/request-id)
+- [Cors](https://hono.dev/docs/middleware/builtin/cors)
+- [Secure Headers](https://hono.dev/docs/middleware/builtin/secure-headers)
+- [Method Override](https://hono.dev/docs/middleware/builtin/method-override)
+- [Basic Auth](https://hono.dev/docs/middleware/builtin/basic-auth)
+- [Context Storage](https://hono.dev/docs/middleware/builtin/context-storage)
+- [Timeout](https://hono.dev/docs/middleware/builtin/timeout)
+- [Compress](https://hono.dev/docs/middleware/builtin/compress)
+- [Cache](https://hono.dev/docs/middleware/builtin/cache)
+- [Google Cloud-Run](https://hono.dev/docs/getting-started/google-cloud-run)
+- [Aws Lambda](https://hono.dev/docs/getting-started/aws-lambda)
+- [Webassembly Wasi](https://hono.dev/docs/getting-started/webassembly-wasi)
+- [Nextjs](https://hono.dev/docs/getting-started/nextjs)
+- [Vercel](https://hono.dev/docs/getting-started/vercel)
+- [Basic](https://hono.dev/docs/getting-started/basic)
+- [Cloudflare Pages](https://hono.dev/docs/getting-started/cloudflare-pages)
+- [Azure Functions](https://hono.dev/docs/getting-started/azure-functions)
+- [Supabase Functions](https://hono.dev/docs/getting-started/supabase-functions)
+- [Lambda Edge](https://hono.dev/docs/getting-started/lambda-edge)
+- [Bun](https://hono.dev/docs/getting-started/bun)
+- [Fastly](https://hono.dev/docs/getting-started/fastly)
+- [Cloudflare Workers](https://hono.dev/docs/getting-started/cloudflare-workers)
+- [Nodejs](https://hono.dev/docs/getting-started/nodejs)
+- [Netlify](https://hono.dev/docs/getting-started/netlify)
+- [Service Worker](https://hono.dev/docs/getting-started/service-worker)
+- [Ali Function-Compute](https://hono.dev/docs/getting-started/ali-function-compute)
+- [Deno](https://hono.dev/docs/getting-started/deno)
+- [Jsx Dom](https://hono.dev/docs/guides/jsx-dom)
+- [Testing](https://hono.dev/docs/guides/testing)
+- [Helpers](https://hono.dev/docs/guides/helpers)
+- [Faq](https://hono.dev/docs/guides/faq)
+- [Rpc](https://hono.dev/docs/guides/rpc)
+- [Examples](https://hono.dev/docs/guides/examples)
+- [Create Hono](https://hono.dev/docs/guides/create-hono)
+- [Validation](https://hono.dev/docs/guides/validation)
+- [Others](https://hono.dev/docs/guides/others)
+- [Best Practices](https://hono.dev/docs/guides/best-practices)
+- [Jsx](https://hono.dev/docs/guides/jsx)
+- [Middleware](https://hono.dev/docs/guides/middleware)

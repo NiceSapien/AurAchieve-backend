@@ -1,10 +1,37 @@
-const { profilesCollectionId: _profilesCollectionId, ...restConfig } = require('../config/appwriteClient');
-const auraPagesCollectionId = process.env.AURAPAGE_COLLECTION_ID || 'aurapage';
+const { client, tablesDB, ID, Query } = require('../config/appwriteClient');
+const { configValue, secretValue } = require('../config/runtimeEnv');
+
+// Updated getContext to include all necessary table IDs dynamically
+async function getContext() {
+    const [dbId, apiKey, endpoint, project, profilesId, tasksId, studyId, habitId, auraId, badId] = await Promise.all([
+        configValue('APPWRITE_DATABASE_ID'),
+        secretValue('APPWRITE_API_KEY'),
+        configValue('APPWRITE_ENDPOINT'),
+        configValue('APPWRITE_PROJECT_ID'),
+        configValue('PROFILES_COLLECTION_ID'),
+        configValue('TASKS_COLLECTION_ID'),
+        configValue('STUDY_PLAN_COLLECTION_ID'),
+        configValue('HABIT_COLLECTION_ID'),
+        configValue('AURAPAGE_COLLECTION_ID'),
+        configValue('BAD_HABITS_COLLECTION_ID')
+    ]);
+    if (apiKey) client.setKey(apiKey);
+    if (endpoint) client.setEndpoint(endpoint);
+    if (project) client.setProject(project);
+    return { 
+        dbId, 
+        profilesId, tasksId, studyId, habitId, 
+        auraPagesId: auraId || 'aurapage', 
+        badHabitsId: badId || 'badhabits' 
+    };
+}
+
 async function getAuraPage(userId) {
     try {
+        const { dbId, auraPagesId } = await getContext();
         const row = await tablesDB.getRow({
-            databaseId: dbId,
-            tableId: auraPagesCollectionId,
+            dbId: dbId,
+            tableId: auraPagesId,
             rowId: userId,
         });
         return row;
@@ -13,9 +40,6 @@ async function getAuraPage(userId) {
         throw error;
     }
 }
-const { tablesDB, dbId, profilesCollectionId, tasksCollectionId, studyPlansCollectionId, habitCollectionId, ID, Query } = require('../config/appwriteClient');
-
-const badHabitsCollectionId = process.env.BAD_HABITS_COLLECTION_ID || 'badhabits';
 
 function severityToAuraLoss(severity) {
     switch ((severity || '').toLowerCase()) {
@@ -43,18 +67,20 @@ function normalizeRowListToDocumentList(list) {
 }
 
 async function updateUserAura(userId, newAura) {
+    const { dbId, profilesId } = await getContext();
     return tablesDB.updateRow({
-        databaseId: dbId,
-        tableId: profilesCollectionId,
+        dbId: dbId,
+        tableId: profilesId,
         rowId: userId,
         data: { aura: newAura },
     });
 }
 
 async function increaseUserAura(userId, incrementAura) {
+    const { dbId, profilesId } = await getContext();
     return tablesDB.incrementRowColumn({
-        databaseId: dbId,
-        tableId: profilesCollectionId,
+        dbId: dbId,
+        tableId: profilesId,
         rowId: userId,
         column: 'aura',
         value: incrementAura,
@@ -62,9 +88,10 @@ async function increaseUserAura(userId, incrementAura) {
 }
 
 async function updateUserValidationStats(userId, count, date) {
+    const { dbId, profilesId } = await getContext();
     return tablesDB.updateRow({
-        databaseId: dbId,
-        tableId: profilesCollectionId,
+        dbId: dbId,
+        tableId: profilesId,
         rowId: userId,
         data: {
             validationCount: count,
@@ -74,12 +101,13 @@ async function updateUserValidationStats(userId, count, date) {
 }
 
 async function getUserTasks(userId) {
+    const { dbId, tasksId } = await getContext();
     const rows = await tablesDB.listRows({
-        databaseId: dbId,
-        tableId: tasksCollectionId,
+        dbId: dbId,
+        tableId: tasksId,
         queries: [
             Query.equal('userId', userId),
-            Query.orderDesc('createdAt'),
+            Query.orderDesc('$createdAt'),
         ],
     });
     return normalizeRowListToDocumentList(rows);
@@ -87,7 +115,8 @@ async function getUserTasks(userId) {
 
 const createTask = async (userId, taskData) => {
     try {
-        console.log(`Attempting to create document in DB: ${process.env.APPWRITE_DATABASE_ID}, Collection: ${process.env.APPWRITE_TASKS_COLLECTION_ID}`);
+        const { dbId, tasksId } = await getContext();
+        console.log(`Attempting to create document in DB: ${dbId}, Collection: ${tasksId}`);
         console.log("Data being sent to Appwrite:", {
             userId: userId,
             name: taskData.name,
@@ -101,8 +130,8 @@ const createTask = async (userId, taskData) => {
             completedAt: null,
         });
         const row = await tablesDB.createRow({
-            databaseId: dbId,
-            tableId: tasksCollectionId,
+            dbId: dbId,
+            tableId: tasksId,
             rowId: ID.unique(),
             data: {
                 userId: userId,
@@ -128,10 +157,11 @@ const createTask = async (userId, taskData) => {
 };
 
 const getOrCreateUserProfile = async (userId, name, email) => {
+    const { dbId, profilesId } = await getContext();
     try {
         const profile = await tablesDB.getRow({
-            databaseId: dbId,
-            tableId: profilesCollectionId,
+            dbId,
+            tableId: profilesId,
             rowId: userId,
         });
         return profile;
@@ -139,8 +169,8 @@ const getOrCreateUserProfile = async (userId, name, email) => {
         if (error.code === 404) {
             try {
                 const newProfile = await tablesDB.createRow({
-                    databaseId: dbId,
-                    tableId: profilesCollectionId,
+                    dbId,
+                    tableId: profilesId,
                     rowId: userId,
                     data: {
                         userId: userId,
@@ -164,9 +194,10 @@ const getOrCreateUserProfile = async (userId, name, email) => {
 
 const createStudyPlan = async (userId, planData) => {
     try {
+        const { dbId, studyId } = await getContext();
         const row = await tablesDB.createRow({
-            databaseId: dbId,
-            tableId: studyPlansCollectionId,
+            dbId,
+            tableId: studyId,
             rowId: userId,
             data: {
                 ...planData,
@@ -182,9 +213,10 @@ const createStudyPlan = async (userId, planData) => {
 
 const getStudyPlan = async (userId, clientDate) => {
     try {
+        const { dbId, studyId } = await getContext();
         let plan = await tablesDB.getRow({
-            databaseId: dbId,
-            tableId: studyPlansCollectionId,
+            dbId,
+            tableId: studyId,
             rowId: userId,
         });
         if (!plan) {
@@ -195,9 +227,11 @@ const getStudyPlan = async (userId, clientDate) => {
             return plan;
         }
 
-        plan.subjects = JSON.parse(plan.subjects);
-        plan.chapters = JSON.parse(plan.chapters);
-        plan.timetable = JSON.parse(plan.timetable);
+        const tryParse = (val) => typeof val === 'string' ? JSON.parse(val) : val;
+
+        plan.subjects = tryParse(plan.subjects);
+        plan.chapters = tryParse(plan.chapters);
+        plan.timetable = tryParse(plan.timetable);
 
         const today = new Date(clientDate);
         today.setHours(0, 0, 0, 0);
@@ -243,9 +277,10 @@ const getStudyPlan = async (userId, clientDate) => {
 
 const updateStudyPlan = async (planId, data) => {
     try {
+        const { dbId, studyId } = await getContext();
         const updatedPlan = await tablesDB.updateRow({
-            databaseId: dbId,
-            tableId: studyPlansCollectionId,
+            dbId,
+            tableId: studyId,
             rowId: planId,
             data,
         });
@@ -258,9 +293,10 @@ const updateStudyPlan = async (planId, data) => {
 
 const deleteStudyPlan = async (planId) => {
     try {
+        const { dbId, studyId } = await getContext();
         await tablesDB.deleteRow({
-            databaseId: dbId,
-            tableId: studyPlansCollectionId,
+            dbId,
+            tableId: studyId,
             rowId: planId,
         });
     } catch (error) {
@@ -271,9 +307,10 @@ const deleteStudyPlan = async (planId) => {
 
 const getOrSetupSocialBlocker = async (userId, socialPassword, socialEnd) => {
     try {
+        const { dbId, profilesId } = await getContext();
         const profile = await tablesDB.getRow({
-            databaseId: dbId,
-            tableId: profilesCollectionId,
+            dbId,
+            tableId: profilesId,
             rowId: userId,
         });
 
@@ -293,12 +330,16 @@ const getOrSetupSocialBlocker = async (userId, socialPassword, socialEnd) => {
             
             function addDaysToDate(dateString, days) {
                 const date = new Date(dateString);
-                date.setDate(date.getDate() + days);
+                const numDays = parseInt(days, 10);
+                if (isNaN(numDays)) return dateString;
+                date.setDate(date.getDate() + numDays);
                 return date.toISOString().split('T')[0]; 
             }
+            
+            const { dbId: writeDbId, profilesId: writeProfilesId } = await getContext();
             const newBlocker = await tablesDB.updateRow({
-                databaseId: dbId,
-                tableId: profilesCollectionId,
+                dbId: writeDbId,
+                tableId: writeProfilesId,
                 rowId: userId,
                 data: {
                     socialPassword: socialPassword,
@@ -315,9 +356,10 @@ const getOrSetupSocialBlocker = async (userId, socialPassword, socialEnd) => {
     }
 }
 const resetSocialBlocker = async (userId) => {
+    const { dbId, profilesId } = await getContext();
     const newBlocker = await tablesDB.updateRow({
-        databaseId: dbId,
-        tableId: profilesCollectionId,
+        dbId,
+        tableId: profilesId,
         rowId: userId,
         data: {
             socialPassword: null,
@@ -334,35 +376,39 @@ async function updateTaskStatus(taskId, status, completedAt = null) {
     if (completedAt) {
         dataToUpdate.completedAt = completedAt;
     }
+    const { dbId, tasksId } = await getContext();
     return tablesDB.updateRow({
-        databaseId: dbId,
-        tableId: tasksCollectionId,
+        dbId,
+        tableId: tasksId,
         rowId: taskId,
         data: dataToUpdate,
     });
 }
 async function updateTaskType(taskId, type) {
+    const { dbId, tasksId } = await getContext();
     return tablesDB.updateRow({
-        databaseId: dbId,
-        tableId: tasksCollectionId,
+        dbId,
+        tableId: tasksId,
         rowId: taskId,
         data: { type },
     });
 }
 
 async function deleteTask(taskId) {
+    const { dbId, tasksId } = await getContext();
     return tablesDB.deleteRow({
-        databaseId: dbId,
-        tableId: tasksCollectionId,
+        dbId,
+        tableId: tasksId,
         rowId: taskId,
     });
 }
 
 async function getTaskById(taskId) {
     try {
+        const { dbId, tasksId } = await getContext();
         return await tablesDB.getRow({
-            databaseId: dbId,
-            tableId: tasksCollectionId,
+            dbId,
+            tableId: tasksId,
             rowId: taskId,
         });
     } catch (error) {
@@ -373,9 +419,10 @@ async function getTaskById(taskId) {
 
 const createHabit = async (userId, data) => {
     try {
+        const { dbId, habitId } = await getContext();
         const document = await tablesDB.createRow({
-            databaseId: dbId,
-            tableId: habitCollectionId,
+            dbId,
+            tableId: habitId,
             rowId: ID.unique(),
             data: {
                 habitName: data.habitName,
@@ -409,9 +456,10 @@ const createBadHabit = async (userId, data) => {
             throw err;
         }
 
+        const { dbId, badHabitsId } = await getContext();
         return await tablesDB.createRow({
-    databaseId: dbId,
-    tableId: badHabitsCollectionId,
+    dbId,
+    tableId: badHabitsId,
     rowId: ID.unique(),
     data: {            
                 habitName: data.habitName,
@@ -430,27 +478,30 @@ const createBadHabit = async (userId, data) => {
 
 
 const getHabits = async (userId) => {
+    const { dbId, habitId } = await getContext();
     const rows = await tablesDB.listRows({
-        databaseId: dbId,
-        tableId: habitCollectionId,
+        dbId,
+        tableId: habitId,
         queries: [Query.equal('userId', userId)],
     });
     return normalizeRowListToDocumentList(rows);
 }
 
 const getBadHabits = async (userId) => {
+    const { dbId, badHabitsId } = await getContext();
     const rows = await tablesDB.listRows({
-        databaseId: dbId,
-        tableId: badHabitsCollectionId,
+        dbId,
+        tableId: badHabitsId,
         queries: [Query.equal('userId', userId)],
     });
     return normalizeRowListToDocumentList(rows);
 };
 
 async function updateHabit(userId, habitId, updates) {
+    const { dbId, habitId: tableId } = await getContext();
     const habit = await tablesDB.getRow({
-        databaseId: dbId,
-        tableId: habitCollectionId,
+        dbId,
+        tableId: tableId,
         rowId: habitId,
     });
 
@@ -480,23 +531,24 @@ async function updateHabit(userId, habitId, updates) {
     }
 
     await tablesDB.updateRow({
-        databaseId: dbId,
-        tableId: habitCollectionId,
+        dbId,
+        tableId: tableId,
         rowId: habitId,
         data,
     });
 
     return tablesDB.getRow({
-        databaseId: dbId,
-        tableId: habitCollectionId,
+        dbId,
+        tableId: tableId,
         rowId: habitId,
     });
 }
 
 async function updateBadHabit(userId, badHabitId, updates) {
+    const { dbId, badHabitsId } = await getContext();
     const badHabit = await tablesDB.getRow({
-        databaseId: dbId,
-        tableId: badHabitsCollectionId,
+        dbId,
+        tableId: badHabitsId,
         rowId: badHabitId,
     });
 
@@ -535,15 +587,15 @@ async function updateBadHabit(userId, badHabitId, updates) {
     }
 
     await tablesDB.updateRow({
-        databaseId: dbId,
-        tableId: badHabitsCollectionId,
+        dbId,
+        tableId: badHabitsId,
         rowId: badHabitId,
         data,
     });
 
     return tablesDB.getRow({
-        databaseId: dbId,
-        tableId: badHabitsCollectionId,
+        dbId,
+        tableId: badHabitsId,
         rowId: badHabitId,
     });
 }
@@ -551,9 +603,10 @@ async function updateBadHabit(userId, badHabitId, updates) {
 async function completeHabit(userId, habitId, completedDays) {
     console.log(completedDays);
     try {
+        const { dbId, habitId: tableId, profilesId } = await getContext();
         const habit = await tablesDB.getRow({
-            databaseId: dbId,
-            tableId: habitCollectionId,
+            dbId,
+            tableId: tableId,
             rowId: habitId,
         });
 
@@ -570,15 +623,15 @@ async function completeHabit(userId, habitId, completedDays) {
 
         const [_, updatedProfile] = await Promise.all([
             tablesDB.incrementRowColumn({
-                databaseId: dbId,
-                tableId: habitCollectionId,
+                dbId,
+                tableId: tableId,
                 rowId: habitId,
                 column: 'completedTimes',
                 value: 1,
             }),
             tablesDB.incrementRowColumn({
-                databaseId: dbId,
-                tableId: profilesCollectionId,
+                dbId,
+                tableId: profilesId,
                 rowId: userId,
                 column: 'aura',
                 value: 15,
@@ -586,8 +639,8 @@ async function completeHabit(userId, habitId, completedDays) {
         ]);
 
         const updatedHabit = await tablesDB.updateRow({
-            databaseId: dbId,
-            tableId: habitCollectionId,
+            dbId,
+            tableId: tableId,
             rowId: habitId,
             data: { completedDays: completedDays?.toString?.() ?? String(completedDays) },
         });
@@ -605,9 +658,10 @@ async function completeHabit(userId, habitId, completedDays) {
 async function completeBadHabit(userId, badHabitId, completedDays, incrementBy = 1) {
     const amount = typeof incrementBy === 'number' && Number.isFinite(incrementBy) ? incrementBy : 1;
     try {
+        const { dbId, badHabitsId, profilesId } = await getContext();
         const badHabit = await tablesDB.getRow({
-            databaseId: dbId,
-            tableId: badHabitsCollectionId,
+            dbId,
+            tableId: badHabitsId,
             rowId: badHabitId,
         });
 
@@ -634,15 +688,15 @@ async function completeBadHabit(userId, badHabitId, completedDays, incrementBy =
 
         const [_, updatedProfile] = await Promise.all([
             tablesDB.incrementRowColumn({
-                databaseId: dbId,
-                tableId: badHabitsCollectionId,
+                dbId,
+                tableId: badHabitsId,
                 rowId: badHabitId,
                 column: 'completedTimes',
                 value: amount,
             }),
             tablesDB.decrementRowColumn({
-                databaseId: dbId,
-                tableId: profilesCollectionId,
+                dbId,
+                tableId: profilesId,
                 rowId: userId,
                 column: 'aura',
                 value: auraLossPer * amount,
@@ -650,8 +704,8 @@ async function completeBadHabit(userId, badHabitId, completedDays, incrementBy =
         ]);
 
         const updatedBadHabit = await tablesDB.updateRow({
-            databaseId: dbId,
-            tableId: badHabitsCollectionId,
+            dbId,
+            tableId: badHabitsId,
             rowId: badHabitId,
             data: {
                 completedDays: completedDays?.toString?.() ?? String(completedDays),
@@ -667,17 +721,19 @@ async function completeBadHabit(userId, badHabitId, completedDays, incrementBy =
     }
 }
 async function deleteHabit(habitId) {
+    const { dbId, habitId: tableId } = await getContext();
     return tablesDB.deleteRow({
-        databaseId: dbId,
-        tableId: habitCollectionId,
+        dbId,
+        tableId: tableId,
         rowId: habitId,
     });
 }
 
 async function deleteBadHabit(badHabitId) {
+    const { dbId, badHabitsId } = await getContext();
     return tablesDB.deleteRow({
-        databaseId: dbId,
-        tableId: badHabitsCollectionId,
+        dbId,
+        tableId: badHabitsId,
         rowId: badHabitId,
     });
 }

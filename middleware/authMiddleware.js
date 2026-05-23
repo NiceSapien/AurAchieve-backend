@@ -1,5 +1,6 @@
-const { Client, Account } = require('node-appwrite');
-require('dotenv').config();
+const { Client, Account } = require('../lib/node-appwrite-shim');
+require('../lib/dotenv-shim').config();
+const { configValue } = require('../config/runtimeEnv');
 
 const authMiddleware = async (req, res, next) => {
     const authHeader = req.headers.authorization;
@@ -14,15 +15,15 @@ const authMiddleware = async (req, res, next) => {
 
         const appwriteClient = new Client();
         appwriteClient
-            .setEndpoint(process.env.APPWRITE_ENDPOINT)
-            .setProject(process.env.APPWRITE_PROJECT_ID);
+            .setEndpoint(configValue('APPWRITE_ENDPOINT'))
+            .setProject(configValue('APPWRITE_PROJECT_ID'));
 
         const account = new Account(appwriteClient);
         appwriteClient.setJWT(token); 
 
         const user = await account.get(); 
 
-        if (process.env.REQUIRE_EMAIL_VERIFICATION && !user.emailVerification) {
+        if (configValue('REQUIRE_EMAIL_VERIFICATION') && !user.emailVerification) {
             return res.status(403).json({
                 status: 'error',
                 message: 'Forbidden: Email not verified. Please verify your email to access this resource.',

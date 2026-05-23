@@ -1,5 +1,5 @@
-const express = require('express');
-const router = express.Router();
+const { expressToHono } = require('../lib/honoExpressCompat');
+const router = expressToHono();
 const authMiddleware = require('../middleware/authMiddleware'); 
 const { verifyTaskWithGemini, classifyTaskWithGemini } = require('../services/geminiService'); 
 const appwriteService = require('../services/appwriteService'); 
@@ -9,8 +9,8 @@ const { profilesCollectionId } = require('../config/appwriteClient');
 
 const DAILY_VALIDATION_LIMIT = 200;
 
-router.use(express.json({ limit: '10mb' }));
-router.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// router.use(express.json({ limit: '10mb' }));
+// router.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 router.get('/', authMiddleware, async (req, res) => {
     console.log("GET /api/tasks: Received request");
