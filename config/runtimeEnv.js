@@ -1,4 +1,36 @@
 let getEnv;
+
+const createNodeEnvReader = () => {
+    let fileEnv;
+    let loaded = false;
+
+    const loadEnvJson = () => {
+        if (loaded) return;
+        loaded = true;
+        try {
+            const fs = require('fs');
+            const path = require('path');
+            const envPath = path.resolve(__dirname, '..', 'env.json');
+            const raw = fs.readFileSync(envPath, 'utf8');
+            fileEnv = JSON.parse(raw);
+        } catch {
+            fileEnv = undefined;
+        }
+    };
+
+    return (key) => {
+        try {
+            const processValue = globalThis.process?.env?.[key];
+            if (processValue !== undefined) return processValue;
+        } catch {
+            // Ignore and continue to env.json fallback.
+        }
+
+        loadEnvJson();
+        return fileEnv?.[key];
+    };
+};
+
 try {
     const { env } = require('fastly:env');
     const { ConfigStore } = require('fastly:config-store');
@@ -15,13 +47,7 @@ try {
 
     getEnv = getConfigValue;
 } catch (e) {
-    getEnv = (key) => {
-        try {
-            return globalThis.process?.env?.[key];
-        } catch {
-            return undefined;
-        }
-    };
+    getEnv = createNodeEnvReader();
 }
 
 const configValue = (key) => {

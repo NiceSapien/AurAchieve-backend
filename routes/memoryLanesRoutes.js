@@ -6,7 +6,7 @@ const crypto = require('../lib/crypto-shim');
 require('../lib/dotenv-shim').config();
 const { configValue, secretValue } = require('../config/runtimeEnv');
 
-const MEMORYLANES_DATABASE_ID = configValue('MEMORYLANES_DATABASE_ID');
+const getMemoryLanesDatabaseId = () => configValue('MEMORYLANES_DATABASE_ID') || configValue('APPWRITE_DATABASE_ID');
 
 const getDb = async () => {
     const client = new Client();
@@ -124,7 +124,7 @@ const findMissingFiles = async (bucketId, fileIds) => {
     return checks.filter(Boolean);
 };
 router.post('/setup', authMiddleware, async (req, res) => {
-    const dbId = MEMORYLANES_DATABASE_ID;
+    const dbId = getMemoryLanesDatabaseId();
     if (!ensureMemoryLanesConfigured(res, dbId)) return;
     const user = req.user;
     if (!user || !user.$id) {
@@ -139,24 +139,24 @@ router.post('/setup', authMiddleware, async (req, res) => {
         const database = await getDb();
         await setUserE2ePreference(userId, e2e);
         try {
-            await database.getCollection(MEMORYLANES_DATABASE_ID, userId);
+            await database.getCollection(dbId, userId);
             return res.status(200).json({ message: 'Memory Lane already exists for this user.' });
         } catch (error) {
             if (error.code !== 404) throw error;
         }
         await database.createCollection(
-            MEMORYLANES_DATABASE_ID,
+            dbId,
             userId,
             userId
         );
-        await database.createStringAttribute(MEMORYLANES_DATABASE_ID, userId, 'name', 255, true);
-        await database.createStringAttribute(MEMORYLANES_DATABASE_ID, userId, 'description', 3000, false);
-        await database.createStringAttribute(MEMORYLANES_DATABASE_ID, userId, 'createdAt', 100, true);
-        await database.createStringAttribute(MEMORYLANES_DATABASE_ID, userId, 'tag', 100, false);
-        await database.createStringAttribute(MEMORYLANES_DATABASE_ID, userId, 'tagColor', 100, false);
-        await database.createBooleanAttribute(MEMORYLANES_DATABASE_ID, userId, 'public', true);
-        await database.createStringAttribute(MEMORYLANES_DATABASE_ID, userId, 'mood', 255, false);
-        await database.createStringAttribute(MEMORYLANES_DATABASE_ID, userId, 'files', 255, false, undefined, true);
+        await database.createStringAttribute(dbId, userId, 'name', 255, true);
+        await database.createStringAttribute(dbId, userId, 'description', 3000, false);
+        await database.createStringAttribute(dbId, userId, 'createdAt', 100, true);
+        await database.createStringAttribute(dbId, userId, 'tag', 100, false);
+        await database.createStringAttribute(dbId, userId, 'tagColor', 100, false);
+        await database.createBooleanAttribute(dbId, userId, 'public', true);
+        await database.createStringAttribute(dbId, userId, 'mood', 255, false);
+        await database.createStringAttribute(dbId, userId, 'files', 255, false, undefined, true);
         res.status(201).json({ message: 'Memory Lane setup successfully. Attributes are being created.' });
     } catch (error) {
         console.error('Setup error:', error);
@@ -164,7 +164,8 @@ router.post('/setup', authMiddleware, async (req, res) => {
     }
 });
 router.post('/', authMiddleware, async (req, res) => {
-    if (!ensureMemoryLanesConfigured(res, MEMORYLANES_DATABASE_ID)) return;
+    const dbId = getMemoryLanesDatabaseId();
+    if (!ensureMemoryLanesConfigured(res, dbId)) return;
     const user = req.user;
     if (!user || !user.$id) {
         return res.status(401).json({ error: 'User not authenticated' });
@@ -225,7 +226,7 @@ router.post('/', authMiddleware, async (req, res) => {
             files
         };
         const response = await database.createDocument(
-            MEMORYLANES_DATABASE_ID,
+            dbId,
             userId, 
             ID.unique(),
             documentData
@@ -237,7 +238,8 @@ router.post('/', authMiddleware, async (req, res) => {
     }
 });
 router.put('/:memoryId', authMiddleware, async (req, res) => {
-    if (!ensureMemoryLanesConfigured(res, MEMORYLANES_DATABASE_ID)) return;
+    const dbId = getMemoryLanesDatabaseId();
+    if (!ensureMemoryLanesConfigured(res, dbId)) return;
     const user = req.user;
     if (!user || !user.$id) {
         return res.status(401).json({ error: 'User not authenticated' });
@@ -309,7 +311,7 @@ router.put('/:memoryId', authMiddleware, async (req, res) => {
             updateData.files = files;
         }
         const response = await database.updateDocument(
-            MEMORYLANES_DATABASE_ID,
+            dbId,
             userId,
             memoryId,
             updateData
@@ -324,7 +326,8 @@ router.put('/:memoryId', authMiddleware, async (req, res) => {
     }
 });
 router.delete('/:memoryId', authMiddleware, async (req, res) => {
-    if (!ensureMemoryLanesConfigured(res, MEMORYLANES_DATABASE_ID)) return;
+    const dbId = getMemoryLanesDatabaseId();
+    if (!ensureMemoryLanesConfigured(res, dbId)) return;
     const user = req.user;
     if (!user || !user.$id) {
         return res.status(401).json({ error: 'User not authenticated' });
@@ -340,7 +343,7 @@ router.delete('/:memoryId', authMiddleware, async (req, res) => {
         const MEMORYLANES_STORAGE_BUCKET_ID = configValue('MEMORYLANES_STORAGE_BUCKET_ID');
         let memoryDoc;
         try {
-            memoryDoc = await database.getDocument(MEMORYLANES_DATABASE_ID, userId, memoryId);
+            memoryDoc = await database.getDocument(dbId, userId, memoryId);
         } catch (error) {
             if (error.code === 404) {
                 return res.status(404).json({ error: 'Memory not found' });
@@ -369,7 +372,7 @@ router.delete('/:memoryId', authMiddleware, async (req, res) => {
                 }
             }
         }
-        await database.deleteDocument(MEMORYLANES_DATABASE_ID, userId, memoryId);
+        await database.deleteDocument(dbId, userId, memoryId);
         return res.status(200).json({ message: 'Memory deleted', deletedFiles, failedFiles });
     } catch (error) {
         if (error.code === 404) {
@@ -380,7 +383,8 @@ router.delete('/:memoryId', authMiddleware, async (req, res) => {
     }
 });
 router.get('/', authMiddleware, async (req, res) => {
-    if (!ensureMemoryLanesConfigured(res)) return;
+    const dbId = getMemoryLanesDatabaseId();
+    if (!ensureMemoryLanesConfigured(res, dbId)) return;
     const user = req.user;
     if (!user || !user.$id) {
         return res.status(401).json({ error: 'User not authenticated' });
@@ -408,7 +412,7 @@ router.get('/', authMiddleware, async (req, res) => {
         const e2e = await getUserE2ePreference(userId);
         if (!e2e && !await ensureEncryptionConfigured(res)) return;
         const response = await database.listDocuments(
-            MEMORYLANES_DATABASE_ID,
+            dbId,
             userId,
             [
                 Query.orderDesc('$createdAt'),
