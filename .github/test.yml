@@ -1,0 +1,32 @@
+name: Node.js CI
+
+on:
+  pull_request:
+    branches: [ "nika-mojek" ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '24' # Or whatever version you use
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Start app and run tests
+      run: |
+        # Start your app in the background
+        node . & 
+        
+        # Give it 3 seconds to spin up and connect to any ports
+        sleep 3 
+        
+        # Run your test requests (using curl or a test script)
+        curl --fail http://localhost:3000/ || exit 1
