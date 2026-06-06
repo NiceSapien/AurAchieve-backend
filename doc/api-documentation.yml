@@ -741,6 +741,23 @@ paths:
         '200':
            description: Memory deleted.
 
+  /api/public/memories/{memoryId}:
+    get:
+      summary: Get Public Memory
+      description: Retrieve a public memory lane document by memory ID.
+      tags: [Memory Lanes]
+      parameters:
+        - in: path
+          name: memoryId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Public memory retrieved successfully.
+        '404':
+          description: Memory not found.
+
 components:
   securitySchemes:
     bearerAuth:
