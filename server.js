@@ -37,7 +37,9 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.get('/', (req, res) => {
     res.json({
          appwriteEndpoint: process.env.APPWRITE_ENDPOINT, 
-         appwriteProjectId: process.env.APPWRITE_PROJECT_ID 
+         appwriteProjectId: process.env.APPWRITE_PROJECT_ID,
+         memoryLanesBucketId: process.env.MEMORYLANES_STORAGE_BUCKET_ID,
+         profileBucketId: process.env.APPWRITE_BUCKET_ID
     });
 });
 // API Routes
